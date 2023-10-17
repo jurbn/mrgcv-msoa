@@ -47,28 +47,62 @@ float Warp::squareToUniformDiskPdf(const Point2f &p) {
 }
 
 Point2f Warp::squareToUniformTriangle(const Point2f& sample) {
-    throw NoriException("Warp::squareToUniformTriangle() is not yet implemented!");
+    if (sample.x() + sample.y() > 1.0f) {
+        return Point2f(1.0f - sample.x(), 1.0f - sample.y());
+    } else {
+        return sample;
+    }
 }
 
 float Warp::squareToUniformTrianglePdf(const Point2f& p) {
-    throw NoriException("Warp::squareToUniformTrianglePdf() is not yet implemented!");
+    if (p.x() + p.y() > 1.0f) {
+        return 0.0f;
+    } else {
+        return 2.0f;    // 1 / 0.5f = 2.0f
+    }
 }
 
 
 Vector3f Warp::squareToUniformSphere(const Point2f &sample) {
-    throw NoriException("Warp::squareToUniformSphere() is not yet implemented!");
+    // Implement a method that transforms uniformly distributed 2D points on the
+    // unit square into uniformly distributed points on the unit sphere centered at the origin.
+    // The method should return a 3D vector.
+    // Code:
+    // 1. Compute the spherical coordinates (theta, phi) from the 2D point (x, y)
+    float theta = 2 * M_PI * sample.x();
+    float phi = 2 * M_PI * sample.y();
+    // 2. Compute the 3D point from the spherical coordinates
+    float x = sin(theta) * cos(phi);
+    float y = sin(theta) * sin(phi);
+    float z = cos(theta);
+    // 3. Return the 3D point
+    return Vector3f(x, y, z);
+
 }
 
 float Warp::squareToUniformSpherePdf(const Vector3f &v) {
-    throw NoriException("Warp::squareToUniformSpherePdf() is not yet implemented!");
+    float area = 4 * M_PI;
+    return 1 / area;
 }
 
 Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
-    throw NoriException("Warp::squareToUniformHemisphere() is not yet implemented!");
+    //throw NoriException("Warp::squareToUniformHemisphere() is not yet implemented!");
+    float theta = 2 * M_PI * sample.x();
+    float phi = 2 * M_PI * sample.y();
+    // 2. Compute the 3D point from the spherical coordinates
+    float x = sin(theta) * cos(phi);
+    float y = sin(theta) * sin(phi);
+    float z = cos(theta);
+    if (z < 0) {
+        z = -z;
+    }
+    return Vector3f(x, y, z);
 }
 
 float Warp::squareToUniformHemispherePdf(const Vector3f &v) {
-    throw NoriException("Warp::squareToUniformHemispherePdf() is not yet implemented!");
+    //throw NoriException("Warp::squareToUniformHemispherePdf() is not yet implemented!");
+    float area = 2 * M_PI;
+    return 1 / area;
 }
 
 Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
