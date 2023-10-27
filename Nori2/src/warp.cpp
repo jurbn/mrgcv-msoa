@@ -23,7 +23,7 @@
 NORI_NAMESPACE_BEGIN
 
 Point2f Warp::squareToUniformSquare(const Point2f &sample) {
-    return sample;
+        return sample;
 }
 
 float Warp::squareToUniformSquarePdf(const Point2f &sample) {
@@ -39,45 +39,49 @@ float Warp::squareToTentPdf(const Point2f &p) {
 }
 
 Point2f Warp::squareToUniformDisk(const Point2f &sample) {
-    throw NoriException("Warp::squareToUniformDisk() is not yet implemented!");
+    float r = sqrt(sample.x());
+    float theta = 2 * M_PI * sample.y();
+    return Point2f(r*cos(theta),r*sin(theta));
 }
 
 float Warp::squareToUniformDiskPdf(const Point2f &p) {
-    throw NoriException("Warp::squareToUniformDiskPdf() is not yet implemented!");
+    if (sqrt(pow(p.x(), 2) + pow(p.y(), 2)) > 1) {
+        return 0.0f;
+    }
+    else {
+        return 1/M_PI;
+    }
 }
 
 Point2f Warp::squareToUniformTriangle(const Point2f& sample) {
     if (sample.x() + sample.y() > 1.0f) {
         return Point2f(1.0f - sample.x(), 1.0f - sample.y());
-    } else {
+    }
+    else {
         return sample;
     }
+    
 }
 
 float Warp::squareToUniformTrianglePdf(const Point2f& p) {
     if (p.x() + p.y() > 1.0f) {
         return 0.0f;
-    } else {
+    }
+    else {
         return 2.0f;    // 1 / 0.5f = 2.0f
     }
 }
 
 
 Vector3f Warp::squareToUniformSphere(const Point2f &sample) {
-    // Implement a method that transforms uniformly distributed 2D points on the
-    // unit square into uniformly distributed points on the unit sphere centered at the origin.
-    // The method should return a 3D vector.
-    // Code:
-    // 1. Compute the spherical coordinates (theta, phi) from the 2D point (x, y)
-    float theta = 2 * M_PI * sample.x();
+    float theta = acos(1 - 2 * sample.x()); 
     float phi = 2 * M_PI * sample.y();
-    // 2. Compute the 3D point from the spherical coordinates
     float x = sin(theta) * cos(phi);
     float y = sin(theta) * sin(phi);
     float z = cos(theta);
     // 3. Return the 3D point
     return Vector3f(x, y, z);
-
+    
 }
 
 float Warp::squareToUniformSpherePdf(const Vector3f &v) {
@@ -86,39 +90,73 @@ float Warp::squareToUniformSpherePdf(const Vector3f &v) {
 }
 
 Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
-    //throw NoriException("Warp::squareToUniformHemisphere() is not yet implemented!");
-    float theta = 2 * M_PI * sample.x();
+    float theta = acos(1 - 2 * sample.x());
     float phi = 2 * M_PI * sample.y();
-    // 2. Compute the 3D point from the spherical coordinates
     float x = sin(theta) * cos(phi);
     float y = sin(theta) * sin(phi);
     float z = cos(theta);
-    if (z < 0) {
+    if (z < 0.0f) {
         z = -z;
     }
     return Vector3f(x, y, z);
 }
 
 float Warp::squareToUniformHemispherePdf(const Vector3f &v) {
-    //throw NoriException("Warp::squareToUniformHemispherePdf() is not yet implemented!");
-    float area = 2 * M_PI;
-    return 1 / area;
+    if (v.z() < 0.0f) {
+        return 0.0f;        
+    }
+    else {        
+        return 1 / (2.0f * M_PI);
+    }
+    
 }
 
 Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
-    throw NoriException("Warp::squareToCosineHemisphere() is not yet implemented!");
+    float theta = asin(sqrt(sample.x()));
+    float phi = 2 * M_PI * sample.y();
+    float x = sin(theta) * cos(phi);
+    float y = sin(theta) * sin(phi);
+    float z = cos(theta);
+    if (z < 0.0f) {
+        z = -z;
+    }
+    return Vector3f(x, y, z);
+    
 }
 
 float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
-    throw NoriException("Warp::squareToCosineHemispherePdf() is not yet implemented!");
+    float p = v.z() / ( M_PI); //v.z()=cos(theta)
+    if (v.z() < 0.0f) {
+        return 0.0f;
+    }
+    else {
+        return p;
+    }
+
+
 }
 
 Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
-    throw NoriException("Warp::squareToBeckmann() is not yet implemented!");
+    // throw NoriException("Warp::squareToBeckmann() is not yet implemented!");
+    // Beckmann half-vector distribution is defined by:
+    // D(w_h) = ((exp(-tan^2(theta_h)/alpha^2))/(M_PI*alpha^2*cos^4(theta_h)))
+    // with alpha a user-defined roughness parameter and theta_h the half-angle defining the angle between the 
+    // half-vector w_h and the north pole of the sphere.
+    float theta_h = atan(sqrt(-(alpha*alpha)*log(1-sample.x())));
+    float phi_h = 2 * M_PI * sample.y();
+    float x = sin(theta_h) * cos(phi_h);
+    float y = sin(theta_h) * sin(phi_h);
+    float z = cos(theta_h);
+    if (z < 0.0f) {
+        z = -z;
+    }
+    return Vector3f(x, y, z);
 }
 
 float Warp::squareToBeckmannPdf(const Vector3f &m, float alpha) {
-    throw NoriException("Warp::squareToBeckmannPdf() is not yet implemented!");
+    // throw NoriException("Warp::squareToBeckmannPdf() is not yet implemented!");
+    float p = 1;
+    return p;
 }
 
 NORI_NAMESPACE_END
