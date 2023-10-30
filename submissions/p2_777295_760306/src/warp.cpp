@@ -142,29 +142,21 @@ Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
     // D(w_h) = ((exp(-tan^2(theta_h)/alpha^2))/(M_PI*alpha^2*cos^4(theta_h)))
     // with alpha a user-defined roughness parameter and theta_h the half-angle defining the angle between the 
     // half-vector w_h and the north pole of the sphere.
-    float phi = M_PI * 2 * sample.x();
-    float theta = atan(sqrt(-alpha * alpha * log(1 - sample.y())));
-    float cosPhi = cos(phi);
-    float sinPhi = sin(phi);
-    float cosTheta = cos(theta);
-    float sinTheta = sin(theta);
-    float x = sinTheta * cosPhi;
-    float y = sinTheta * sinPhi;
-    float z = cosTheta;
+    float theta_h = atan(sqrt(-(alpha*alpha)*log(1-sample.x())));
+    float phi_h = 2 * M_PI * sample.y();
+    float x = sin(theta_h) * cos(phi_h);
+    float y = sin(theta_h) * sin(phi_h);
+    float z = cos(theta_h);
+    if (z < 0.0f) {
+        z = -z;
+    }
     return Vector3f(x, y, z);
 }
 
 float Warp::squareToBeckmannPdf(const Vector3f &m, float alpha) {
     // throw NoriException("Warp::squareToBeckmannPdf() is not yet implemented!");
-    if (m.z() <= 0)
-        return 0;
-    float alpha2 = alpha * alpha;
-    float cosTheta = m.z();
-    float tanTheta2 = (m.x() * m.x() + m.y() * m.y()) / (cosTheta * cosTheta);
-    float cosTheta3 = cosTheta * cosTheta * cosTheta;
-    float azimuthal = INV_PI;
-    float longitudinal = exp(-tanTheta2 / alpha2) / (alpha2 * cosTheta3);
-    return azimuthal * longitudinal;
+    float p = 1;
+    return p;
 }
 
 NORI_NAMESPACE_END
