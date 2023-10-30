@@ -78,17 +78,34 @@ public:
 		return m_environment->eval(Point2f(x, y))* m_radiance;
 	}
 
-	virtual Color3f sample(EmitterQueryRecord& lRec, const Point2f& sample, float optional_u) const {
-		throw NoriException("EnvironmentEmitter::sample() is not yet implemented!");
+	virtual Color3f sample(EmitterQueryRecord &lRec, const Point2f &sample, float optional_u) const
+	{
+		// if there is no environment map, return black
+		if (!m_environment)
+			return Color3f(0.f);
+
+		// sample a direction on the unit sphere using the warp function
+		Vector3f wi = Warp::squareToUniformSphere(sample);
+		// set the direction in the emitter query record
+		lRec.dist = (lRec.p - lRec.ref).norm();
+		lRec.wi = wi;
+		lRec.pdf = pdf(lRec);
+		// compute the radiance
+		Color3f radiance = eval(lRec);
+		return radiance;
 	}
 
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
 	// Assumes all information about the intersection point is already provided inside.
 	// WARNING: Use with care. Malformed EmitterQueryRecords can result in undefined behavior. Plus no visibility is considered.
-	virtual float pdf(const EmitterQueryRecord& lRec) const {
-		throw NoriException("EnvironmentEmitter::pdf() is not yet implemented!");
+	virtual float pdf(const EmitterQueryRecord &lRec) const
+	{
+		// if there is no environment map, return 0
+		if (!m_environment)
+			return 0.f;
+		float pdf = Warp::squareToUniformSpherePdf(lRec.wi);
+		return pdf;
 	}
-
 
 	// Get the parent mesh
 	void setParent(NoriObject* parent)

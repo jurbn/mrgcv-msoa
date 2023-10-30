@@ -45,6 +45,7 @@ void Mesh::activate() {
     }
 
     m_pdf.reserve(m_F.cols());
+    m_pdf.normalize();  // this is done in order to sample the triangles with respect to their surface area
 }
 
 float Mesh::surfaceArea(n_UINT index) const {
@@ -114,15 +115,56 @@ Point3f Mesh::getCentroid(n_UINT index) const {
  */
 void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const
 {
-	throw NoriException("Mesh::samplePosition() is not yet implemented!");	
-}
+	// throw NoriException("Mesh::samplePosition() is not yet implemented!");
+    // get the triangle index, pdf is proportional to the surface area of the triangle
+    Point2f randomSample = sample;
+    size_t triangle_index = m_pdf.sampleReuse(randomSample.x());   // reuse the sample for the triangle index
+    // now we have the triangle index, we can sample a point on the triangle
+    // first, we get the vertices of the triangle
+    n_UINT i0 = m_F(0, triangle_index), i1 = m_F(1, triangle_index), i2 = m_F(2, triangle_index);   // indices of the vertices
+    const Point3f v0 = m_V.col(i0), v1 = m_V.col(i1), v2 = m_V.col(i2);   // vertices of the triangle
+    // get the baricentric coordinates of the sample
+    Point2f bar_coord = Warp::squareToUniformTriangle(sample);
+    float u = bar_coord.x(), v = bar_coord.y(), w = 1.0f - u - v;
+    // interpolate those coordinates to the triangle via the vertices
+    p = v0 * u + v1 * v + v2 * w;
+
+    // now do the same for the normal
+    // initialize the normals
+    
+    // FIXME: this breaks table, uncomment for working version (only to be used with table)
+    // check if the mesh has normals
+    if (m_N.size() > 0) {
+        // n0 = m_N.col(m_F(0, triangle_index));
+        // n1 = m_N.col(m_F(1, triangle_index));
+        // n2 = m_N.col(m_F(2, triangle_index));
+        const Normal3f n0 = m_N.col(i0), n1 = m_N.col(i1), n2 = m_N.col(i2);
+        n = n0 * u + n1 * v + n2 * w;
+    }else{  // if the mesh does not have normals, compute them
+        // n0 = (v1 - v0).cross(v2 - v0);
+        // n1 = (v2 - v1).cross(v0 - v1);
+        // n2 = (v0 - v2).cross(v1 - v2);
+        const Vector3f edge1 = v1 - v0, edge2 = v2 - v0;
+        n = (edge1.cross(edge2)).normalized();
+    }
+    
+    // now do the same for the uv coordinates
+    Point2f uv0 = m_UV.col(i0);
+    Point2f uv1 = m_UV.col(i1);
+    Point2f uv2 = m_UV.col(i2);
+    // interpolate those coordinates to the triangle via the vertices
+    uv = u * uv0 + v * uv1 + w * uv2;
+} 
 
 /// Return the surface area of the given triangle
 float Mesh::pdf(const Point3f &p) const
 {
-	throw NoriException("Mesh::pdf() is not yet implemented!");	
-	
-	return 0.;
+	// throw NoriException("Mesh::pdf() is not yet implemented!");	
+	float area = 0.f;
+    for (int i = 0; i < m_F.cols(); i++) {
+        area += surfaceArea(i);
+    }
+    return 1.0f / area;
 }
 
 

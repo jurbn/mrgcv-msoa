@@ -57,8 +57,11 @@ void Scene::activate() {
     
     if (!m_sampler) {
         /* Create a default (independent) sampler */
+        // m_sampler = static_cast<Sampler*>(
+        //     NoriObjectFactory::createInstance("independent", PropertyList()));
+        // create a discrete sampler
         m_sampler = static_cast<Sampler*>(
-            NoriObjectFactory::createInstance("independent", PropertyList()));
+            NoriObjectFactory::createInstance("discrete", PropertyList()));
     }
 
     cout << endl;
@@ -68,10 +71,10 @@ void Scene::activate() {
 
 /// Sample emitter
 const Emitter * Scene::sampleEmitter(float rnd, float &pdf) const {
-	auto const & n = m_emitters.size();
-	size_t index = std::min(static_cast<size_t>(std::floor(n*rnd)), n - 1);
-	pdf = 1. / float(n);
-	return m_emitters[index];
+	auto const & n = m_emitters.size(); // number of emitters
+	size_t index = std::min(static_cast<size_t>(std::floor(n*rnd)), n - 1); // select emitter
+	pdf = 1. / float(n);        // pdf of selecting the emitter (uniform)
+	return m_emitters[index];   // return the emitter
 }
 
 float Scene::pdfEmitter(const Emitter *em) const {

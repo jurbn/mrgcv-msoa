@@ -31,32 +31,28 @@ class DirectWhittedIntegrator : public Integrator {
             // source "em" is visible from the intersection point.
             // For that, we create a ray object (shadow ray),
             // and compute the intersection.
-            
-            // Create a shadow ray from its to our em light source
-            // get the direction from its to em
-            Vector3f dir = emitterRecord.p - its.p;
-            // create the shadow ray
-            Ray3f shadowRay(its.p, dir);
-            // Check if the shadow ray intersects with the scene
-            if (scene->rayIntersect(shadowRay, its)) {
-                // if it does, then the light source is not visible
-                // from the intersection point, so we skip it
-                continue;   // will skip this iteration and continue w/ the next
-            }   // if it doesn't, then the light source is visible
+            // first of all we need to calculate the shadow ray direction towards the light source
+            Vector3f shadowRayDir = emitterRecord.p - its.p;
+            float distanceToLight = shadowRayDir.norm(); // to normalize the direction
+            shadowRayDir /= distanceToLight;
 
-            // Finally, we evaluate the BSDF. For that, we need to build
-            // a BSDFQueryRecord from the outgoing direction (the direction
-            // of the primary ray, in ray.d), and the incoming direction
-            // (the direction to the light source, in emitterRecord.wi).
-            // Note that: a) the BSDF assumes directions in the local frame
-            // of reference; and b) that both the incoming and outgoing
-            // directions are assumed to start from the intersection point.
-            BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d) ,
-            its.toLocal(emitterRecord.wi) , its.uv, ESolidAngle);
-            // For each light, we accomulate the incident light times the
-            // foreshortening times the BSDF term (i.e. the render equation).
-            Lo += Le * its.shFrame.n.dot(emitterRecord.wi) *
-                        its.mesh->getBSDF()->eval(bsdfRecord);
+            Ray3f shadowRay(its.p, shadowRayDir);
+            // Check if the shadow ray intersects with the scene
+            Intersection shadowIntersection;
+            if (!scene->rayIntersect(shadowRay, shadowIntersection)) { // if it doesn't intersect, then the light source is visible
+                // Finally, we evaluate the BSDF. For that, we need to build
+                // a BSDFQueryRecord from the outgoing direction (the direction
+                // of the primary ray, in ray.d), and the incoming direction
+                // (the direction to the light source, in emitterRecord.wi).
+                // Note that: a) the BSDF assumes directions in the local frame
+                // of reference; and b) that both the incoming and outgoing
+                // directions are assumed to start from the intersection point.
+                BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d) , its.toLocal(emitterRecord.wi) , its.uv, ESolidAngle);
+                // For each light, we accomulate the incident light times the
+                // foreshortening times the BSDF term (i.e. the render equation).
+                Lo += Le * its.shFrame.n.dot(emitterRecord.wi) * its.mesh->getBSDF()->eval(bsdfRecord);
+            }   // if it does, then the light source is not visible from the intersection point, so we skip it
+            
         }
         return Lo ;
     }

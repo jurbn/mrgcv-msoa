@@ -46,19 +46,29 @@ public:
 	// We don't assume anything about the visibility of points specified in 'ref' and 'p' in the EmitterQueryRecord.
 	virtual Color3f eval(const EmitterQueryRecord & lRec) const {
 		if (!m_mesh)
-			throw NoriException("There is no shape attached to this Area light!");
-
-		// This function call can be done by bsdf sampling routines.
-		// Hence the ray was already traced for us - i.e a visibility test was already performed.
-		// Hence just check if the associated normal in emitter query record and incoming direction are not backfacing
-		throw NoriException("AreaEmitter::eval() is not yet implemented!");
+        	throw NoriException("There is no shape attached to this Area light!");
+		// throw NoriException("AreaEmitter::eval() is not yet implemented!");
+		if (lRec.n.dot(-lRec.wi) < 0.0f) // check if backfacing
+        	return Color3f(0.0f);
+    	return m_radiance->eval(lRec.uv); // * lRec.pdf;
 	}
 
 	virtual Color3f sample(EmitterQueryRecord & lRec, const Point2f & sample, float optional_u) const {
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 
-		throw NoriException("AreaEmitter::sample() is not yet implemented!");
+		//throw NoriException("AreaEmitter::sample() is not yet implemented!");
+		if (lRec.n.dot(-lRec.wi) < 0.0f)	// check if backfacing
+			return Color3f(0.0f);
+		// sample a point on the mesh
+		m_mesh->samplePosition(sample, lRec.p, lRec.n, lRec.uv);
+		// update the values on the record
+		lRec.dist = (lRec.p - lRec.ref).norm();
+		lRec.wi = (lRec.p - lRec.ref) / lRec.dist;
+		lRec.pdf = pdf(lRec);
+		if (lRec.pdf < 1e-3f)	// if pdf is too small, assume it is black
+			return Color3f(0.0f);
+		return m_radiance->eval(lRec.uv);	// return the radiance
 	}
 
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
@@ -68,8 +78,15 @@ public:
 	virtual float pdf(const EmitterQueryRecord &lRec) const {
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
-
-		throw NoriException("AreaEmitter::pdf() is not yet implemented!");
+		// throw NoriException("AreaEmitter::pdf() is not yet implemented!");
+		if (lRec.n.dot(-lRec.wi) < 0.0f) // check if backfacing
+			return 0.0f;
+		// get the pdf of the mesh
+		float m_pdf = m_mesh->pdf(lRec.p);
+		float numerator = static_cast<float>(pow(lRec.dist, 2));
+		float denominator = lRec.n.dot(-lRec.wi);
+		
+		return m_pdf * numerator / denominator;
 	}
 
 
@@ -101,7 +118,7 @@ public:
 		}
 	}
 protected:
-	Texture* m_radiance;
+	Texture *m_radiance;
 	float m_scale;
 };
 
