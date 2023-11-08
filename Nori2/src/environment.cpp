@@ -85,10 +85,9 @@ public:
 			return Color3f(0.f);
 
 		// sample a direction on the unit sphere using the warp function
-		Vector3f wi = Warp::squareToUniformSphere(sample);
 		// set the direction in the emitter query record
 		lRec.dist = (lRec.p - lRec.ref).norm();
-		lRec.wi = wi;
+		lRec.wi = Warp::squareToUniformSphere(sample);;
 		lRec.pdf = pdf(lRec);
 		// compute the radiance
 		Color3f radiance = eval(lRec);

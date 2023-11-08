@@ -17,7 +17,6 @@ class DirectWhittedIntegrator : public Integrator {
         Intersection its;
         if (!scene->rayIntersect(ray, its))     // if the ray does not intersect, 
             return scene->getBackground(ray);   // return the color of the background
-        float pdflight;
         EmitterQueryRecord emitterRecord(its.p);
         // Get all lights in the scene
         const std::vector<Emitter*> lights = scene->getLights();
