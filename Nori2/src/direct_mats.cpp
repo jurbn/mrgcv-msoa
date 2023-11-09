@@ -20,36 +20,31 @@ public:
         int depth = 1;  // actual number of bounces
 
         while (true) {  // loop until we dont intersect or russian roulette kills us
-            Intersection its;   
+            Intersection its;   // intersection point
             if (!scene->rayIntersect(recursiveRay, its)){
                 return Lo;
             }
             if (its.mesh->isEmitter()) {
                 // add the radiance to the output
-                EmitterQueryRecord lRecE(its.p);
-                Lo += throughput * its.mesh->getEmitter()->eval(lRecE);
+                EmitterQueryRecord emQR(its.p);
+                emQR.ref = recursiveRay.o;
+                emQR.wi = recursiveRay.d;
+                emQR.n = its.shFrame.n; 
+                Lo += throughput * its.mesh->getEmitter()->eval(emQR);
             }
-
-            // Sample the BSDF to generate a new ray direction
-            BSDFQueryRecord bRec(its.shFrame.toLocal(-recursiveRay.d));
-            Color3f bsdf = its.mesh->getBSDF()->sample(bRec, sampler->next2D());   // this is the color of the surface
-            float cosTheta = Frame::cosTheta(bRec.wo);
-
-            // I GET LOTS OF ZERO BSDFS HERE;;;; WHYYYYYYY
-            if (bsdf.isZero() || cosTheta <= 0.0f)
-                return Color3f(1.0f, 0.0f, 1.0f);   //Lo;
-
-            float pdf = its.mesh->getBSDF()->pdf(bRec);
-            throughput *= bsdf; // * cosTheta / pdf;
-
+                    
             if (depth > 2) {    // ensure at least 3 bounces
-                // apply russian roulette
-                float survivalProbability = std::min(0.95f, throughput.maxCoeff());
+                // apply russian roulette to decide wether to continue or not
+                float survivalProbability = std::min(0.99f, throughput.maxCoeff()); // cap it at 0.99
                 if (sampler->next1D() > survivalProbability)
                     return Lo;
-                throughput /= survivalProbability;
+                throughput /= survivalProbability;  // throughput gets smaller as we continue (this is the weight of the radiance)
             }
-            recursiveRay = Ray3f(its.p, its.toWorld(bRec.wo));
+            // sample the BSDF to generate a new ray direction
+            BSDFQueryRecord bsdfQR(its.shFrame.toLocal(-recursiveRay.d));
+            Color3f bsdf = its.mesh->getBSDF()->sample(bsdfQR, sampler->next2D());   // this is the color of the surface
+            throughput *= bsdf; // this way, the next time we bounce, we will have the color of this surface
+            recursiveRay = Ray3f(its.p, its.toWorld(bsdfQR.wo));
             depth++;
         }
         return Lo;

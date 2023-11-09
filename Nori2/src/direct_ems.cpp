@@ -38,8 +38,12 @@ public:
 			Lo = Color3f(0.);	// if the shadow ray intersects with the scene, the output is 0 cause its in shadow
 			BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d), its.toLocal(emitterRecord.wi), its.uv, ESolidAngle);
             float denominator = pdflight * emitterRecord.pdf;
-            if (denominator > 0.0f)	// to avoid division by 0 (resulting in NaNs and anoying warnings)
-			    Lo = (Le * its.shFrame.n.dot(emitterRecord.wi) * its.mesh->getBSDF()->eval(bsdfRecord)) / denominator;
+            if (denominator > 0.0f){	// to avoid division by 0 (resulting in NaNs and anoying warnings)
+				Color3f bsdf = its.mesh->getBSDF()->eval(bsdfRecord);
+				// if (bsdf.isZero())	// sanity check, if bsdf is black, return fuchsia just to know
+				// 	Lo = Color3f(1.f, 0.f, 1.f);
+			    Lo = (Le * its.shFrame.n.dot(emitterRecord.wi) * bsdf) / denominator;
+			}
 		}
 		return Lo;
 	}

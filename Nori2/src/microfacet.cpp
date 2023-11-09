@@ -66,7 +66,7 @@ public:
         float g_term = g1_input * g1_output;
 
         // implement fr(ωi,ωo) = D(ωh)F((ωh ·ωi),R0)G(ωi,ωo,ωh) / 4cosθicosθo
-        return (fresnel_term * beckmann_term * g_term) / (4 * Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo));
+        return (fresnel_term * beckmann_term * g_term) / (4.0f * Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo));
     }
 
     /// Evaluate the sampling density of \ref sample() wrt. solid angles
@@ -97,7 +97,7 @@ public:
         // throw NoriException("RoughConductor::sample() is not yet implemented!");
 
         // sample a direction on the unit sphere using the warp function and set the direction in the emitter query record
-		bRec.wi = Warp::squareToBeckmann(_sample, m_alpha->eval(bRec.uv).getLuminance());;
+		bRec.wo = Warp::squareToBeckmann(_sample, m_alpha->eval(bRec.uv).getLuminance());;
 		// compute the radiance
 		Color3f radiance = eval(bRec);
 		return radiance;
