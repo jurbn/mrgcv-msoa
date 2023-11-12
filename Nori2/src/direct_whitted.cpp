@@ -25,7 +25,7 @@ class DirectWhittedIntegrator : public Integrator {
             const Emitter* em = lights[i];
             // Here we sample the point sources, getting its radiance
             // and direction.
-            Color3f Le = em->sample(emitterRecord, sampler->next2D( ), 0.) ;
+            Color3f Le = em->sample(emitterRecord, sampler->next2D(), 0.);
             // Here perform a visibility query, to check whether the light
             // source "em" is visible from the intersection point.
             // For that, we create a ray object (shadow ray),
@@ -50,7 +50,7 @@ class DirectWhittedIntegrator : public Integrator {
                 // For each light, we accomulate the incident light times the
                 // foreshortening times the BSDF term (i.e. the render equation).
                 Lo += Le * its.shFrame.n.dot(emitterRecord.wi) * its.mesh->getBSDF()->eval(bsdfRecord);
-            }   // if it does, then the light source is not visible from the intersection point, so we skip it
+            }   // if it does, then the light source is not visible from the intersection point, so it doesnt contribute
             
         }
         return Lo ;

@@ -35,7 +35,6 @@ public:
 
 		// if the shadow ray doesnt intersect with the scene, or if it intersects after the light source, then the point is not in shadow
 		if (!scene->rayIntersect(shadowRay, shadow_its) || !(shadow_its.t < emitterRecord.dist)) {
-			Lo = Color3f(0.);	// if the shadow ray intersects with the scene, the output is 0 cause its in shadow
 			BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d), its.toLocal(emitterRecord.wi), its.uv, ESolidAngle);
             float denominator = pdflight * emitterRecord.pdf;
             if (denominator > 0.0f){	// to avoid division by 0 (resulting in NaNs and anoying warnings)

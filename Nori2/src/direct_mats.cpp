@@ -12,40 +12,60 @@ public:
 		/* No parameters this time */
 	}
 
-    // TODO: this breaks on rough surfaces, check it out
     Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
-        Color3f Lo = Color3f(0.f); // output radiance
-        Color3f throughput = Color3f(1.f); // this is more or less like a weight for the radiance we get from the emitter
-        Ray3f recursiveRay = ray;   // this is a copy we can bounce around
-        int depth = 1;  // actual number of bounces
-
-        while (true) {  // loop until we dont intersect or russian roulette kills us
-            Intersection its;   // intersection point
-            if (!scene->rayIntersect(recursiveRay, its)){
-                return Lo;
-            }
-            if (its.mesh->isEmitter()) {
-                // add the radiance to the output
-                EmitterQueryRecord emQR(its.p);
-                emQR.ref = recursiveRay.o;
-                emQR.wi = recursiveRay.d;
-                emQR.n = its.shFrame.n; 
-                Lo += throughput * its.mesh->getEmitter()->eval(emQR);
-            }
-                    
-            if (depth > 2) {    // ensure at least 3 bounces
-                // apply russian roulette to decide wether to continue or not
-                float survivalProbability = std::min(0.99f, throughput.maxCoeff()); // cap it at 0.99
-                if (sampler->next1D() > survivalProbability)
-                    return Lo;
-                throughput /= survivalProbability;  // throughput gets smaller as we continue (this is the weight of the radiance)
-            }
-            // sample the BSDF to generate a new ray direction
-            BSDFQueryRecord bsdfQR(its.shFrame.toLocal(-recursiveRay.d));
-            Color3f bsdf = its.mesh->getBSDF()->sample(bsdfQR, sampler->next2D());   // this is the color of the surface
-            throughput *= bsdf; // this way, the next time we bounce, we will have the color of this surface
-            recursiveRay = Ray3f(its.p, its.toWorld(bsdfQR.wo));
-            depth++;
+        // this integrator casts a ray to the scene and uses brdf sampling to compute the direct illumination
+        // the estimate computed by this integrator corresponds to: 
+        // Lo(x,ωo) ≈ Le(x,ωo) + (1/N)∑((Le(r(x,ω(k)i),−ω(k)i) fr(x,ωo,ω(k)i) cosθ(k)i) / pΩ(ω(k)i))
+        Color3f Lo(0.0f);   // the radiance we will return
+        /*
+            First ray
+        */
+        // check if the ray intersects with anything at all
+        Intersection its1;
+        if (!scene->rayIntersect(ray, its1)) {
+            return scene->getBackground(ray);    // if it doesn't intersect, return the background color (end of the path)
+        }
+        if (its1.mesh->isEmitter()) {   // if it intersects with an emitter, return the radiance of the emitter (end of the path)
+            EmitterQueryRecord emitterQR(its1.p);
+            return its1.mesh->getEmitter()->eval(emitterQR);
+        }
+        /*
+            Second ray
+        */
+        // sample the brdf
+        BSDFQueryRecord bsdfQR(its1.toLocal(-ray.d), sampler->next2D());
+        Color3f brdfSample = its1.mesh->getBSDF()->sample(bsdfQR, sampler->next2D());
+        // check if the brdf sample is valid (absorbed or invalid samples are not valid)
+        if (brdfSample.isZero() || brdfSample.hasNaN()) {   // if it is not valid, return black
+            return Color3f(0.0f);
+        }
+        // now create a new ray with the sampled direction
+        Ray3f ray2(its1.p, its1.toWorld(bsdfQR.wo));
+        // check if the ray intersects with anything at all
+        Intersection its2;
+        if (!scene->rayIntersect(ray2, its2)) {
+            // if the bounced ray doesnt intersect with nothing, we will add the background color
+            // to the radiance we will return
+            Color3f backgroundColor = scene->getBackground(ray2);
+            Lo = backgroundColor * brdfSample * std::abs(Frame::cosTheta(bsdfQR.wo));
+            // since there are only two bounced rays, we can return the radiance
+            return Lo;
+        }
+        // if the ray intersects with an emitter, we will add the radiance of the emitter
+        // to the radiance we will return
+        if (its2.mesh->isEmitter()) {
+            EmitterQueryRecord emitterQR(its2.p);
+            // calculate the radiance of the emitter to compute the contribution to the returned radiance
+            Color3f Le = its2.mesh->getEmitter()->eval(emitterQR);
+            // calculate the cosine foreshortening factor (this is the cosine of the angle between the normal and the ray direction)
+            // if the ray direction is in the same direction as the normal, the cosine foreshortening factor will be 1
+            // and therefore the contribution will be maximum
+            float cosForeshortening = std::abs(its2.shFrame.n.dot(ray2.d)); // this is the same as the commented line below, since vectors are normalized
+            //float cosForeshortening = std::abs(Frame::cosTheta(its2.toLocal(-ray2.d)));
+            // add the contribution to the returned radiance
+            Lo = Le * brdfSample * cosForeshortening;
+            // since there are only two bounced rays, we can return the radiance
+            return Lo;
         }
         return Lo;
     }

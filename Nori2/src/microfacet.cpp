@@ -51,22 +51,22 @@ public:
             || Frame::cosTheta(bRec.wo) <= 0)
             return Color3f(0.0f);
         // throw NoriException("RoughConductor::eval() is not yet implemented!");
+        
+        Vector3f wh = (bRec.wi + bRec.wo).normalized();         // wh is the half vector of the in and out directions
+        float alpha = m_alpha->eval(bRec.uv).getLuminance();    // alpha param is defining the roughness of the surface
 
-        // Ro is the reflection at normal incidence!!!!
-        // alpha param is defining the roughness of the surface, we need it to compute the beckmann term
-        Vector3f wh = (bRec.wi + bRec.wo).normalized();
-        float alpha = m_alpha->eval(bRec.uv).getLuminance();
+        // get the beckmann normal distribution
         float beckmann_term = Reflectance::BeckmannNDF(wh, alpha);
+        // get the fresnel term under schlick's approximation
         Color3f fresnel_term = Reflectance::fresnel(bRec.wi.dot(wh), m_R0->eval(bRec.uv));
-
-        // G models the Beckmann’s shadowing-masking term under the Smith approximation,
-        // defined as G(ωi,ωo,ωh) =G1(ωi,ωh) G1(ωo,ωh)
+        // get beckmanns shadowing-masking term under the smith approximation
+        // defined as G(ωi,ωo,ωh) = G1(ωi,ωh) * G1(ωo,ωh)
         float g1_input = Reflectance::G1(bRec.wi, wh, alpha);
         float g1_output = Reflectance::G1(bRec.wo, wh, alpha);
         float g_term = g1_input * g1_output;
 
         // implement fr(ωi,ωo) = D(ωh)F((ωh ·ωi),R0)G(ωi,ωo,ωh) / 4cosθicosθo
-        return (fresnel_term * beckmann_term * g_term) / (4.0f * Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo));
+        return (beckmann_term * fresnel_term * g_term) / (4.0f * Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo));
     }
 
     /// Evaluate the sampling density of \ref sample() wrt. solid angles
@@ -78,9 +78,10 @@ public:
             || Frame::cosTheta(bRec.wo) <= 0)
             return 0.0f;
         // throw NoriException("RoughConductor::eval() is not yet implemented!");
+        Vector3f wh = (bRec.wi + bRec.wo).normalized();
+        float alpha = m_alpha->eval(bRec.uv).getLuminance();
 
-        float pdf = Warp::squareToBeckmannPdf(bRec.wi, m_alpha->eval(bRec.uv).getLuminance());
-		return pdf;
+        return Warp::squareToBeckmannPdf(wh, alpha);
     }
 
     /// Sample the BRDF
@@ -95,12 +96,13 @@ public:
         }
         bRec.measure = ESolidAngle;
         // throw NoriException("RoughConductor::sample() is not yet implemented!");
-
+        
         // sample a direction on the unit sphere using the warp function and set the direction in the emitter query record
-		bRec.wo = Warp::squareToBeckmann(_sample, m_alpha->eval(bRec.uv).getLuminance());;
-		// compute the radiance
-		Color3f radiance = eval(bRec);
-		return radiance;
+        float alpha = m_alpha->eval(bRec.uv).getLuminance();
+		Vector3f wh = Warp::squareToBeckmann(_sample, alpha);   // this is the microfacet normal
+        bRec.wo = ((2.0f * bRec.wi.dot(wh) * wh) - bRec.wi);          // this is the outgoing direction
+        // return the weight of the sample
+        return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
     }
 
     bool isDiffuse() const {
@@ -248,7 +250,6 @@ private:
 };
 
 
-
 class RoughSubstrate : public BSDF {
 public:
     RoughSubstrate(const PropertyList &propList) {
@@ -277,26 +278,29 @@ public:
 		// throw NoriException("RoughSubstrate::eval() is not yet implemented!");
 
         // CALCULATE F_DIFF
-        float f_diff = ((28*m_kd->eval(bRec.uv).getLuminance()) / (23*M_PI));
-        f_diff *= (1-std::pow((m_extIOR - m_intIOR) / (m_extIOR + m_intIOR), 2));
-        f_diff *= (1-std::pow(1 - 0.5*Frame::cosTheta(bRec.wi), 5));
-        f_diff *= (1-std::pow(1 - 0.5*Frame::cosTheta(bRec.wo), 5));
+        Color3f f_diff = (28.0f*m_kd->eval(bRec.uv)) / (23.0f*M_PI);
+        f_diff *= 1.0f - ((m_extIOR - m_intIOR) / (m_extIOR + m_intIOR)) * ((m_extIOR - m_intIOR) / (m_extIOR + m_intIOR));
+        f_diff *= (1.0f - std::pow(1.0f - 0.5f*Frame::cosTheta(bRec.wi), 5));
+        f_diff *= (1.0f - std::pow(1.0f - 0.5f*Frame::cosTheta(bRec.wo), 5));
 
         // CALCULATE F_MF
+        // this is the half vector of the in and out directions
         Vector3f wh = (bRec.wi + bRec.wo).normalized();
-        float alpha = m_alpha->eval(bRec.uv).getLuminance();
+        float alpha = m_alpha->eval(bRec.uv).getLuminance();    // alpha param is defining the roughness of the surface
+        // get the beckmann normal distribution
         float beckmann_term = Reflectance::BeckmannNDF(wh, alpha);
+        // get the fresnel term under schlick's approximation
         float fresnel_term = Reflectance::fresnel(bRec.wi.dot(wh), m_extIOR, m_intIOR);
-        // G models the Beckmann’s shadowing-masking term under the Smith approximation,
-        // defined as G(ωi,ωo,ωh) =G1(ωi,ωh) G1(ωo,ωh)
+        // get beckmanns shadowing-masking term under the smith approximation
+        // defined as G(ωi,ωo,ωh) = G1(ωi,ωh) * G1(ωo,ωh)
         float g1_input = Reflectance::G1(bRec.wi, wh, alpha);
         float g1_output = Reflectance::G1(bRec.wo, wh, alpha);
         float g_term = g1_input * g1_output;
         // implement fr(ωi,ωo) = D(ωh)F((ωh ·ωi),R0)G(ωi,ωo,ωh) / 4cosθicosθo
-        float f_mf = (fresnel_term * beckmann_term * g_term) / (4 * Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo));
+        float f_mf = (beckmann_term * fresnel_term * g_term) / (4.0f * Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo));
 
         // implement fr(ωi,ωo) = fdiff(ωi,ωo) + fmf(ωi,ωo)
-        return f_diff + f_mf;
+        return f_diff + f_mf; // note that the microfacet part is monochromatic (unlike the diffuse part)
 	}
 
     /// Evaluate the sampling density of \ref sample() wrt. solid angles
@@ -310,16 +314,16 @@ public:
 
 		// throw NoriException("RoughSubstrate::eval() is not yet implemented!");
 
-        // russian roulette between diffuse and microfacet
-        float random_number = rand() / (float)RAND_MAX;     // FIXME: this could be done with sampleReuse
-        Color3f fresnel = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-        float p_microfacet = fresnel.getLuminance();
-        float p_diffuse = 1 - p_microfacet;
-        if (random_number < p_diffuse){ // this means we sample the diffuse part
-            return Warp::squareToBeckmannPdf(bRec.wi, m_alpha->eval(bRec.uv).getLuminance());
-        }else{  // this means we sample the microfacet part
-            return Warp::squareToCosineHemispherePdf(bRec.wo);
-        }
+        // the probability of choosing a microfacet based lobe is p(fmf) = F ((n·ωi),ηext,ηint)
+        // while the diffuse lobe has p(fdiff) = 1 - p(fmf)
+        float p_mf = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+        float p_diff = 1 - p_mf;
+        // now we need to calculate both pdfs and return the weighted sum
+        Vector3f wh = (bRec.wi + bRec.wo).normalized();         // wh is the half vector of the in and out directions
+        float alpha = m_alpha->eval(bRec.uv).getLuminance();    // alpha param is defining the roughness of the surface
+        float pdf_mf = Warp::squareToBeckmannPdf(wh, alpha);
+        float pdf_diff = Warp::squareToCosineHemispherePdf(bRec.wi);
+        return (p_mf * pdf_mf) + (p_diff * pdf_diff);   // return the weighted sum of the pdfs
     }
 
     /// Sample the BRDF
@@ -335,18 +339,24 @@ public:
         bRec.measure = ESolidAngle;
 		// throw NoriException("RoughSubstrate::sample() is not yet implemented!");
         
-        // russian roulette between diffuse and microfacet
-        float random_number = rand() / (float)RAND_MAX;     // FIXME: this could be done with sampleReuse
-        Color3f fresnel = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-        float p_microfacet = fresnel.getLuminance();
-        float p_diffuse = 1 - p_microfacet;
-        if (random_number < p_diffuse){ // this means we sample the diffuse part
-            bRec.wo = Warp::squareToBeckmann(_sample, m_alpha->eval(bRec.uv).getLuminance());
-        }else{  // this means we sample the microfacet part
-            bRec.wo = Warp::squareToCosineHemisphere(_sample);
+        // choose one component using russian roulette based on the F value
+        float alpha = m_alpha->eval(bRec.uv).getLuminance();
+        // compute the fresnel term over the surface normal
+        float fresnel = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+        float random_number = std::rand() / (float)RAND_MAX;
+        // russian roulette
+        if (random_number < fresnel) {
+            // if microfacet, use beckmann distribution to sample the  microfacet normal
+            Vector3f wh = Warp::squareToBeckmann(_sample, alpha);   // this is the microfacet normal
+            // calculate the outgoing direction
+            bRec.wo = ((2.0f * bRec.wi.dot(wh) * wh) - bRec.wi);    // this is the outgoing direction
+        } else {
+            // if diffuse, use cosine weighted hemisphere to sample the diffuse normal
+            bRec.wo = Warp::squareToCosineHemisphere(_sample);      // this is the outgoing direction
         }
-        return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);   // FIXME: not sure if this is correct!!
-	}
+        // return the weight of the sample
+        return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
+    }
 
     bool isDiffuse() const {
         /* While microfacet BRDFs are not perfectly diffuse, they can be
