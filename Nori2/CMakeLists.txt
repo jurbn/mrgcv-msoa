@@ -101,8 +101,13 @@ add_executable(nori
   src/direct_whitted.cpp
   src/depth.cpp
   src/direct_ems.cpp
+  
   src/reflectance.cpp
   src/direct_mats.cpp
+  src/direct_mis.cpp
+
+  src/path.cpp
+  src/path_nee.cpp
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})

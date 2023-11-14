@@ -54,11 +54,12 @@ public:
         
         Vector3f wh = (bRec.wi + bRec.wo).normalized();         // wh is the half vector of the in and out directions
         float alpha = m_alpha->eval(bRec.uv).getLuminance();    // alpha param is defining the roughness of the surface
-
+        float cosThetaI = Frame::cosTheta(bRec.wi);             // cosThetaI is the cosine of the angle between the in direction and the normal
+        float cosThetaO = Frame::cosTheta(bRec.wo);             // cosThetaO is the cosine of the angle between the out direction and the normal
         // get the beckmann normal distribution
         float beckmann_term = Reflectance::BeckmannNDF(wh, alpha);
         // get the fresnel term under schlick's approximation
-        Color3f fresnel_term = Reflectance::fresnel(bRec.wi.dot(wh), m_R0->eval(bRec.uv));
+        Color3f fresnel_term = Reflectance::fresnel(cosThetaI, m_R0->eval(bRec.uv));
         // get beckmanns shadowing-masking term under the smith approximation
         // defined as G(ωi,ωo,ωh) = G1(ωi,ωh) * G1(ωo,ωh)
         float g1_input = Reflectance::G1(bRec.wi, wh, alpha);
@@ -66,7 +67,7 @@ public:
         float g_term = g1_input * g1_output;
 
         // implement fr(ωi,ωo) = D(ωh)F((ωh ·ωi),R0)G(ωi,ωo,ωh) / 4cosθicosθo
-        return (beckmann_term * fresnel_term * g_term) / (4.0f * Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo));
+        return (beckmann_term * fresnel_term * g_term) / (4.0f * cosThetaI * cosThetaO);
     }
 
     /// Evaluate the sampling density of \ref sample() wrt. solid angles
@@ -99,9 +100,10 @@ public:
         
         // sample a direction on the unit sphere using the warp function and set the direction in the emitter query record
         float alpha = m_alpha->eval(bRec.uv).getLuminance();
-		Vector3f wh = Warp::squareToBeckmann(_sample, alpha);   // this is the microfacet normal
-        bRec.wo = ((2.0f * bRec.wi.dot(wh) * wh) - bRec.wi);          // this is the outgoing direction
-        // return the weight of the sample
+		bRec.wo = Warp::squareToBeckmann(_sample, alpha);   // this is the microfacet normal
+        // bRec.wo = ((2.0f * bRec.wi.dot(wh) * wh) - bRec.wi);          // this is the outgoing direction
+        bRec.eta = 1.0f;
+
         return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
     }
 
@@ -280,24 +282,26 @@ public:
         // CALCULATE F_DIFF
         Color3f f_diff = (28.0f*m_kd->eval(bRec.uv)) / (23.0f*M_PI);
         f_diff *= 1.0f - ((m_extIOR - m_intIOR) / (m_extIOR + m_intIOR)) * ((m_extIOR - m_intIOR) / (m_extIOR + m_intIOR));
-        f_diff *= (1.0f - std::pow(1.0f - 0.5f*Frame::cosTheta(bRec.wi), 5));
-        f_diff *= (1.0f - std::pow(1.0f - 0.5f*Frame::cosTheta(bRec.wo), 5));
+        f_diff *= (1.0f - std::powf(1.0f - 0.5f*Frame::cosTheta(bRec.wi), 5));
+        f_diff *= (1.0f - std::powf(1.0f - 0.5f*Frame::cosTheta(bRec.wo), 5));
 
         // CALCULATE F_MF
         // this is the half vector of the in and out directions
         Vector3f wh = (bRec.wi + bRec.wo).normalized();
         float alpha = m_alpha->eval(bRec.uv).getLuminance();    // alpha param is defining the roughness of the surface
+        float cosThetaI = Frame::cosTheta(bRec.wi);             // cosThetaI is the cosine of the angle between the in direction and the normal
+        float cosThetaO = Frame::cosTheta(bRec.wo);             // cosThetaO is the cosine of the angle between the out direction and the normal
         // get the beckmann normal distribution
         float beckmann_term = Reflectance::BeckmannNDF(wh, alpha);
         // get the fresnel term under schlick's approximation
-        float fresnel_term = Reflectance::fresnel(bRec.wi.dot(wh), m_extIOR, m_intIOR);
+        float fresnel_term = Reflectance::fresnel(cosThetaI, m_extIOR, m_intIOR);
         // get beckmanns shadowing-masking term under the smith approximation
         // defined as G(ωi,ωo,ωh) = G1(ωi,ωh) * G1(ωo,ωh)
         float g1_input = Reflectance::G1(bRec.wi, wh, alpha);
         float g1_output = Reflectance::G1(bRec.wo, wh, alpha);
         float g_term = g1_input * g1_output;
         // implement fr(ωi,ωo) = D(ωh)F((ωh ·ωi),R0)G(ωi,ωo,ωh) / 4cosθicosθo
-        float f_mf = (beckmann_term * fresnel_term * g_term) / (4.0f * Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo));
+        float f_mf = (beckmann_term * fresnel_term * g_term) / (4.0f * cosThetaI * cosThetaO);
 
         // implement fr(ωi,ωo) = fdiff(ωi,ωo) + fmf(ωi,ωo)
         return f_diff + f_mf; // note that the microfacet part is monochromatic (unlike the diffuse part)
@@ -322,7 +326,7 @@ public:
         Vector3f wh = (bRec.wi + bRec.wo).normalized();         // wh is the half vector of the in and out directions
         float alpha = m_alpha->eval(bRec.uv).getLuminance();    // alpha param is defining the roughness of the surface
         float pdf_mf = Warp::squareToBeckmannPdf(wh, alpha);
-        float pdf_diff = Warp::squareToCosineHemispherePdf(bRec.wi);
+        float pdf_diff = Warp::squareToCosineHemispherePdf(bRec.wo);
         return (p_mf * pdf_mf) + (p_diff * pdf_diff);   // return the weighted sum of the pdfs
     }
 
@@ -344,6 +348,13 @@ public:
         // compute the fresnel term over the surface normal
         float fresnel = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
         float random_number = std::rand() / (float)RAND_MAX;
+        // DiscretePDF m_pdf;
+        // m_pdf.reserve(2);
+        // m_pdf.append(fresnel);
+        // m_pdf.append(1 - fresnel);
+        // Point2f sampleCopy = _sample;
+        // // russian roulette
+        // if (m_pdf.sampleReuse(sampleCopy[0]) == 0) {
         // russian roulette
         if (random_number < fresnel) {
             // if microfacet, use beckmann distribution to sample the  microfacet normal

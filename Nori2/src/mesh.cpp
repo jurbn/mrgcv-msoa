@@ -45,6 +45,11 @@ void Mesh::activate() {
     }
 
     m_pdf.reserve(m_F.cols());
+    for (n_UINT i = 0; i < m_F.cols(); i++) //Depending on the number of triangles
+    {
+        float area = surfaceArea(i); //We get the area of the triangle
+        m_pdf.append(area); // Append it to the list m_pdf 
+    }
     m_pdf.normalize();  // this is done in order to sample the triangles with respect to their surface area
 }
 
@@ -160,11 +165,7 @@ void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2
 float Mesh::pdf(const Point3f &p) const
 {
 	// throw NoriException("Mesh::pdf() is not yet implemented!");	
-	float area = 0.f;
-    for (int i = 0; i < m_F.cols(); i++) {
-        area += surfaceArea(i);
-    }
-    return 1.0f / area;
+	return m_pdf.getNormalization();
 }
 
 

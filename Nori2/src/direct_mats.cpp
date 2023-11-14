@@ -27,14 +27,18 @@ public:
         }
         if (its1.mesh->isEmitter()) {   // if it intersects with an emitter, return the radiance of the emitter (end of the path)
             EmitterQueryRecord emitterQR(its1.p);
+            emitterQR.ref = ray.o;
+			emitterQR.wi = ray.d;
+			emitterQR.n = its1.shFrame.n;
             return its1.mesh->getEmitter()->eval(emitterQR);
         }
         /*
             Second ray
         */
         // sample the brdf
-        BSDFQueryRecord bsdfQR(its1.toLocal(-ray.d), sampler->next2D());
-        Color3f brdfSample = its1.mesh->getBSDF()->sample(bsdfQR, sampler->next2D());
+        Point2f sample = sampler->next2D();
+        BSDFQueryRecord bsdfQR(its1.toLocal(-ray.d), sample);
+        Color3f brdfSample = its1.mesh->getBSDF()->sample(bsdfQR, sample);
         // check if the brdf sample is valid (absorbed or invalid samples are not valid)
         if (brdfSample.isZero() || brdfSample.hasNaN()) {   // if it is not valid, return black
             return Color3f(0.0f);
@@ -47,7 +51,7 @@ public:
             // if the bounced ray doesnt intersect with nothing, we will add the background color
             // to the radiance we will return
             Color3f backgroundColor = scene->getBackground(ray2);
-            Lo = backgroundColor * brdfSample * std::abs(Frame::cosTheta(bsdfQR.wo));
+            Lo = backgroundColor * brdfSample;// * std::abs(Frame::cosTheta(bsdfQR.wo));
             // since there are only two bounced rays, we can return the radiance
             return Lo;
         }
@@ -55,6 +59,9 @@ public:
         // to the radiance we will return
         if (its2.mesh->isEmitter()) {
             EmitterQueryRecord emitterQR(its2.p);
+            emitterQR.ref = ray2.o;
+			emitterQR.wi = ray2.d;
+			emitterQR.n = its2.shFrame.n;
             // calculate the radiance of the emitter to compute the contribution to the returned radiance
             Color3f Le = its2.mesh->getEmitter()->eval(emitterQR);
             // calculate the cosine foreshortening factor (this is the cosine of the angle between the normal and the ray direction)
@@ -63,10 +70,12 @@ public:
             float cosForeshortening = std::abs(its2.shFrame.n.dot(ray2.d)); // this is the same as the commented line below, since vectors are normalized
             //float cosForeshortening = std::abs(Frame::cosTheta(its2.toLocal(-ray2.d)));
             // add the contribution to the returned radiance
-            Lo = Le * brdfSample * cosForeshortening;
+            Lo = Le * brdfSample;// * cosForeshortening;
+            // NOTE: okay no cosine since we're already taking that into account in the brdf (i think????)
             // since there are only two bounced rays, we can return the radiance
             return Lo;
         }
+        // in this case, the ray intersected with a surface that is not an emitter so we will return black
         return Lo;
     }
 

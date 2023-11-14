@@ -50,7 +50,7 @@ public:
 		// throw NoriException("AreaEmitter::eval() is not yet implemented!");
 		if (lRec.n.dot(-lRec.wi) < 0.0f) // check if backfacing
         	return Color3f(0.0f);
-    	return m_radiance->eval(lRec.uv); // * lRec.pdf;
+    	return m_radiance->eval(lRec.uv);
 	}
 
 	virtual Color3f sample(EmitterQueryRecord & lRec, const Point2f & sample, float optional_u) const {
@@ -66,9 +66,10 @@ public:
 		lRec.dist = (lRec.p - lRec.ref).norm();
 		lRec.wi = (lRec.p - lRec.ref) / lRec.dist;
 		lRec.pdf = pdf(lRec);
-		if (lRec.pdf < 1e-3f)	// if pdf is too small, assume it is black
+		if (lRec.pdf < 1e-3) {	// if pdf is too small, assume it is black
 			return Color3f(0.0f);
-		return m_radiance->eval(lRec.uv);	// return the radiance
+		}
+		return m_radiance->eval(lRec.uv);
 	}
 
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
@@ -79,14 +80,15 @@ public:
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 		// throw NoriException("AreaEmitter::pdf() is not yet implemented!");
-		if (lRec.n.dot(-lRec.wi) < 0.0f) // check if backfacing
+
+		float cos_theta = lRec.n.dot(-lRec.wi);
+		if (cos_theta <= 0.0f) // check if backfacing
 			return 0.0f;
 		// get the pdf of the mesh
 		float m_pdf = m_mesh->pdf(lRec.p);
-		float numerator = static_cast<float>(pow(lRec.dist, 2));
-		float denominator = lRec.n.dot(-lRec.wi);
+		float squared_dist = static_cast<float>(pow(lRec.dist, 2));
 		
-		return m_pdf * numerator / denominator;
+		return m_pdf * squared_dist / cos_theta;
 	}
 
 
