@@ -1,7 +1,7 @@
 <scene>
 	<!-- Independent sample generator -->
 	<sampler type="independent">
-		<integer name="sampleCount" value="64"/>
+		<integer name="sampleCount" value="1024"/>
 	</sampler>
 
 	<!-- Use the ambient occlusion integrator -->
@@ -13,7 +13,7 @@
 
 		<bsdf type="roughconductor">
 			<color name="R0" value="1.0 0.71 0.29"/>
-			<float name="alpha" value="0.25"/>
+			<float name="alpha" value="0.05"/>
 		</bsdf>
 	</mesh>
 

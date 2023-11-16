@@ -59,7 +59,7 @@ public:
                 if (p_em_em + p_mat_em > Epsilon){ // if you dont enter this, Les will be 0
                     Les = (Lem_ls * its.shFrame.n.dot(emitterQR_ls.wi) * bsdf) / denominator;
                     // compute the weight
-                    w_mats = p_em_em / (p_em_em + p_mat_em);
+                    w_ems = p_em_em / (p_em_em + p_mat_em);
                 }
 			}
         }

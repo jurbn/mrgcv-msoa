@@ -100,8 +100,9 @@ public:
         
         // sample a direction on the unit sphere using the warp function and set the direction in the emitter query record
         float alpha = m_alpha->eval(bRec.uv).getLuminance();
-		bRec.wo = Warp::squareToBeckmann(_sample, alpha);   // this is the microfacet normal
-        // bRec.wo = ((2.0f * bRec.wi.dot(wh) * wh) - bRec.wi);          // this is the outgoing direction
+        Vector3f wh = Warp::squareToBeckmann(_sample, alpha);   // this is the microfacet normal
+		// bRec.wo = Warp::squareToBeckmann(_sample, alpha);   // this is the microfacet normal
+        bRec.wo = ((2.0f * bRec.wi.dot(wh) * wh) - bRec.wi);          // this is the outgoing direction
         bRec.eta = 1.0f;
 
         return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
@@ -279,18 +280,18 @@ public:
             return Color3f(0.0f);
 		// throw NoriException("RoughSubstrate::eval() is not yet implemented!");
 
-        // CALCULATE F_DIFF
-        Color3f f_diff = (28.0f*m_kd->eval(bRec.uv)) / (23.0f*M_PI);
-        f_diff *= 1.0f - ((m_extIOR - m_intIOR) / (m_extIOR + m_intIOR)) * ((m_extIOR - m_intIOR) / (m_extIOR + m_intIOR));
-        f_diff *= (1.0f - std::powf(1.0f - 0.5f*Frame::cosTheta(bRec.wi), 5));
-        f_diff *= (1.0f - std::powf(1.0f - 0.5f*Frame::cosTheta(bRec.wo), 5));
-
-        // CALCULATE F_MF
         // this is the half vector of the in and out directions
         Vector3f wh = (bRec.wi + bRec.wo).normalized();
         float alpha = m_alpha->eval(bRec.uv).getLuminance();    // alpha param is defining the roughness of the surface
         float cosThetaI = Frame::cosTheta(bRec.wi);             // cosThetaI is the cosine of the angle between the in direction and the normal
         float cosThetaO = Frame::cosTheta(bRec.wo);             // cosThetaO is the cosine of the angle between the out direction and the normal
+        // CALCULATE F_DIFF
+        Color3f f_diff = (28.0f*m_kd->eval(bRec.uv)) / (23.0f*M_PI);
+        f_diff *= 1.0f - ((m_extIOR - m_intIOR) / (m_extIOR + m_intIOR)) * ((m_extIOR - m_intIOR) / (m_extIOR + m_intIOR));
+        f_diff *= (1.0f - std::powf(1.0f - 0.5f*cosThetaI, 5));
+        f_diff *= (1.0f - std::powf(1.0f - 0.5f*cosThetaO, 5));
+
+        // CALCULATE F_MF
         // get the beckmann normal distribution
         float beckmann_term = Reflectance::BeckmannNDF(wh, alpha);
         // get the fresnel term under schlick's approximation

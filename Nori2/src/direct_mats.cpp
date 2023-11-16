@@ -67,8 +67,8 @@ public:
             // calculate the cosine foreshortening factor (this is the cosine of the angle between the normal and the ray direction)
             // if the ray direction is in the same direction as the normal, the cosine foreshortening factor will be 1
             // and therefore the contribution will be maximum
-            float cosForeshortening = std::abs(its2.shFrame.n.dot(ray2.d)); // this is the same as the commented line below, since vectors are normalized
-            //float cosForeshortening = std::abs(Frame::cosTheta(its2.toLocal(-ray2.d)));
+            // float cosForeshortening = std::abs(its2.shFrame.n.dot(ray2.d)); // this is the same as the commented line below, since vectors are normalized
+            // float cosForeshortening = std::abs(Frame::cosTheta(its2.toLocal(-ray2.d)));
             // add the contribution to the returned radiance
             Lo = Le * brdfSample;// * cosForeshortening;
             // NOTE: okay no cosine since we're already taking that into account in the brdf (i think????)
