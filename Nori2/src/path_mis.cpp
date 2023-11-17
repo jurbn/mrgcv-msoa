@@ -13,108 +13,95 @@ public:
 	}
 
     Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
-        Color3f Lo(0.0f);
-        Intersection its;
+        Color3f Lo(0.0f);   // the radiance we will return
         int depth = 1;
         float survivalProb;
         Color3f throughput(1.0f);
         Ray3f bouncyRay = ray;
-        while (true){
-            float w_ems = 0.f, w_mats = 0.f;
-            float p_em_em = 0.f, p_mat_em = 0.f, p_mat_mat = 0.f, p_em_mat = 0.f;
+        Intersection its;
+        Color3f L_ls(0.0f); // light sampling contribution to the bounce
+        while (true) {
+            float w_mats = 0.0f, w_lights = 0.0f; // weights for the light sampling and the brdf sampling
             if (!scene->rayIntersect(bouncyRay, its)) {
-                // no intersection
-                Lo = throughput * scene->getBackground(bouncyRay);
+                // if the ray doesnt intersect with nothing, we will add the background color
+                // to the radiance we will return
+                Color3f backgroundColor = scene->getBackground(bouncyRay);
+                Lo = backgroundColor * throughput;
                 break;
             }
             if (its.mesh->isEmitter()) {
-                // intersection with an emitter
+                // if the ray intersects with an emitter, we will add the radiance of the emitter
+                // to the radiance we will return
                 EmitterQueryRecord emitterQR(its.p);
                 emitterQR.ref = bouncyRay.o;
                 emitterQR.wi = bouncyRay.d;
-                emitterQR.n = its.shFrame.n; 
-                Lo = throughput * its.mesh->getEmitter()->eval(emitterQR);
+                emitterQR.n = its.shFrame.n;
+                Lo = its.mesh->getEmitter()->eval(emitterQR) * throughput;
                 break;
             }
-            // If it's not an emitter nor background, we will take both samples and weight them
-
-            /*
-            Light importance sampling
-            */
-            Color3f Les(0.0f);  // this is the contribution of the light importance sampling
-            // randomly choose an emitter
-            float pdflight;	// this is the probability density of choosing an emitter
+            // NOW IF THE RAY INTERSECTS WITH A NON-EMITTING SURFACE
+            /* LIGHT SAMPLING */
+            // randomly choose an emitter and add its contribution to the throughput
+            float pdflight;	// this is the probability density of choosing a light source
             EmitterQueryRecord emitterQR_ls(its.p);	// add intersection point to emitterRecord
-            const Emitter* em = scene->sampleEmitter(sampler->next1D(), pdflight);
-            // get the radiance of said emitter
-            Color3f Lem_ls = em->sample(emitterQR_ls, sampler->next2D(), 0.f);
-            // create a shadow ray to see if the point is in shadow
-            Ray3f shadowRay(its.p, emitterQR_ls.wi);
-            shadowRay.maxt = (emitterQR_ls.p - its.p).norm();
-            // check if the ray intersects with an emitter or if the first intersection in shadows
-            Intersection its_ls;
-            bool inShadow = scene->rayIntersect(shadowRay, its_ls);
-            if (!inShadow || its_ls.t >= (emitterQR_ls.dist - Epsilon)){
+            const Emitter* em = scene->sampleEmitter(sampler->next1D(), pdflight); 		// sample a random light source
+            Color3f Le = em->sample(emitterQR_ls, sampler->next2D(), 0.);	// radiance of the light source
+            Ray3f shadowRay(its.p, emitterQR_ls.wi); // shadow ray that goes from the intersection point to the light source
+            shadowRay.maxt = (emitterQR_ls.p - its.p).norm();	// maxt is the distance between the intersection point and the light source (?)
+            // if the shadow ray doesnt intersect with the scene, or if it intersects after the light source, then the point is not in shadow
+            float p_em_em = 0.f, p_mat_em = 0.f;
+            L_ls = Color3f(0.0f);
+            Intersection shadowIts;
+            bool inShadow = scene->rayIntersect(shadowRay, shadowIts);
+            if (!inShadow || (shadowIts.t >= (emitterQR_ls.dist - Epsilon))) {
                 BSDFQueryRecord bsdfQR_ls(its.toLocal(-bouncyRay.d), its.toLocal(emitterQR_ls.wi), its.uv, ESolidAngle);
                 float denominator = pdflight * emitterQR_ls.pdf;
                 if (denominator > Epsilon){	// to avoid division by 0 (resulting in NaNs and anoying warnings)
-                    emitterQR_ls.dist = its.t;
+                    // emitterQR_ls.dist = its.t;
                     Color3f bsdf = its.mesh->getBSDF()->eval(bsdfQR_ls);
-                    p_em_em = denominator;  // its the
-                    p_mat_em = its.mesh->getBSDF()->pdf(bsdfQR_ls);//BRDF pdf
-                    if (p_em_em + p_mat_em > Epsilon){ // if you dont enter this, Les will be 0
-                        Les = (Lem_ls * its.shFrame.n.dot(emitterQR_ls.wi) * bsdf) / denominator;
-                        // compute the weight
-                        w_ems = p_em_em / (p_em_em + p_mat_em);
-                    }
+                    // update the color
+                    L_ls = (Le * its.shFrame.n.dot(emitterQR_ls.wi) * bsdf) / denominator;
                 }
+                p_em_em = pdflight * emitterQR_ls.pdf;
+                p_mat_em = its.mesh->getBSDF()->pdf(bsdfQR_ls);
             }
 
-            // russian roulette to see if the ray dies
-            if (depth > 2) {
+            if (depth > 2) {    // we want to ensure that the path has at least  bounces
+                // start the russian roulette
+                // max component of the throughput will be the probability of survival (we cap it at 0.95)
                 survivalProb = std::min(throughput.maxCoeff(), 0.99f);
-                if (sampler->next1D() > survivalProb) {
-                    break;
+                if (sampler->next1D() > survivalProb) { // this is the russian roulette
+                    break;  // if the ray dies, we stop the loop
                 } else {
-                    throughput /= survivalProb;
+                    throughput /= survivalProb; // if the ray survives, we need to update the throughput
                 }
             }
 
-            /*
-            BRDF sampling
-            */
-            Color3f Lbs(0.0f);  // BRDF sampling contribution
-            BSDFQueryRecord bsdfQR_bs(its.toLocal(-bouncyRay.d), its.uv);
-            Color3f brdfSample = its.mesh->getBSDF()->sample(bsdfQR_bs, sampler->next2D());
-            if (!(brdfSample.isZero() || brdfSample.hasNaN())) {    // only enter if sample is valid!
-                // generate a new ray with the sampled direction
-                Ray3f bsdfRay(its.p, its.toWorld(bsdfQR_bs.wo));
-                Intersection its_bs;
-                if (!scene->rayIntersect(bsdfRay, its_bs)) {
-                    // if the ray doesnt intersect, take the background color
-                    Color3f backgroundColor = scene->getBackground(bsdfRay);
-                    Lbs = backgroundColor * brdfSample;
-                } else {
-                    // if the ray intersects with an emitter, take the radiance of the emitter
-                    if (its_bs.mesh->isEmitter()) {
-                        const Emitter* em_bs = its_bs.mesh->getEmitter();
-                        EmitterQueryRecord emitterQR_bs(em_bs, its.p, its_bs.p, its_bs.shFrame.n, its_bs.uv);
-                        p_mat_mat = its.mesh->getBSDF()->pdf(bsdfQR_bs);
-                        p_em_mat = em_bs->pdf(emitterQR_bs);
-                        // i need to convert them to the same space first
-                        p_em_mat *= scene->pdfEmitter(em);
-                        if (p_em_mat + p_mat_mat > Epsilon){
-                            Color3f Lem_bs = em_bs->eval(emitterQR_bs);
-                            Lbs = Lem_bs * brdfSample;
-                            // compute the weight
-                            w_mats = p_mat_mat / (p_em_mat + p_mat_mat);
-                        }
-                    }
+            /* BSDF SAMPLING */
+            // if the ray intersects with a surface, we will sample the brdf
+            Point2f sample = sampler->next2D();
+            BSDFQueryRecord bsdfQR(its.toLocal(-bouncyRay.d), sample);
+            Color3f brdfSample = its.mesh->getBSDF()->sample(bsdfQR, sample);
+            // UPDATE THE RAY
+            bouncyRay = Ray3f(its.p, its.toWorld(bsdfQR.wo));
+            // check if the brdf sample is valid (absorbed or invalid samples are not valid)
+            if (brdfSample.isZero() || brdfSample.hasNaN()) {   // if it is not valid, color absorbed -> stop the loop
+                break;
+            }
+            if (bsdfQR.measure == EDiscrete) {
+                w_mats = 1.0f;
+                w_lights = 0.0f;
+            } else {
+                float p_mat_mat = its.mesh->getBSDF()->pdf(bsdfQR);
+                float p_em_mat = em->pdf(emitterQR_ls);
+                if (p_em_mat + p_mat_mat > Epsilon) {
+                    w_mats = p_mat_mat / (p_em_mat + p_mat_mat);
+                }
+                if (p_em_em + p_mat_em > Epsilon) {
+                    w_lights = p_em_em / (p_em_em + p_mat_em);
                 }
             }
-
-            bouncyRay = Ray3f(its.p, its.toWorld(bsdfQR_bs.wo));
-            throughput *= Lbs * w_mats + Les * w_ems;
+            throughput *= brdfSample * w_mats + L_ls * w_lights;
             depth++;
         }
         return Lo;

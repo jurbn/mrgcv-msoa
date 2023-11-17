@@ -85,7 +85,7 @@ public:
             if (brdfSample.isZero() || brdfSample.hasNaN()) {   // if it is not valid, color absorbed -> stop the loop
                 break;
             }
-            if (bsdfQR.measure == EDiscrete) {//如果PDF不是立体角上计算
+            if (bsdfQR.measure == EDiscrete) {
                 w_mats = 1.0f;
                 w_lights = 0.0f;
             } else {
