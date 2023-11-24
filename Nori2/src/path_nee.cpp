@@ -32,15 +32,19 @@ public:
             */
             Point2f sample = sampler->next2D();
             BSDFQueryRecord bsdfQR(its.toLocal(-bouncyRay.d), sample);
+            int sampleLights = bsdfQR.measure != EDiscrete;
+            float w_mats = sampleLights ? 0.5f : 1.0f;
+            float w_lights = sampleLights ? 0.5f : 0.0f;
             // if the ray intersects with an emitter, we will add the radiance of the emitter (if it's not perfect smooth)
             if (its.mesh->isEmitter()) {
+                sampleLights = false; // THE MATERIAL DOESN'T NECESSARILY NEED TO BE DELTA, BUT WE WILL CONSIDER IT AS ONE
+                w_mats = 1.0f;  // THIS IS IN ORDER TO ONLY SAMPLE THE EMMITER ONCE
                 EmitterQueryRecord emitterQR(its.p);
                 emitterQR.ref = bouncyRay.o;
                 emitterQR.wi = bouncyRay.d;
                 emitterQR.n = its.shFrame.n;
-                if (bsdfQR.measure != EDiscrete) {
-                    Lo += its.mesh->getEmitter()->eval(emitterQR) * throughput;
-                }
+                Lo += w_mats * its.mesh->getEmitter()->eval(emitterQR) * throughput;
+                break;
             }
 
             /* BSDF SAMPLING */
@@ -54,28 +58,30 @@ public:
             throughput *= bsdfSample;
             
             /* LIGHT SAMPLING */
-            // randomly choose an emitter and add its contribution to the throughput
-            float pdflight;	// this is the probability density of choosing a light source
-            EmitterQueryRecord emitterQR_ls(its.p);	// add intersection point to emitterRecord
-            const Emitter* em = scene->sampleEmitter(sampler->next1D(), pdflight); 		// sample a random light source
-            Color3f Le = em->sample(emitterQR_ls, sampler->next2D(), 0.);	// radiance of the light source
-            Ray3f shadowRay(its.p, emitterQR_ls.wi); // shadow ray that goes from the intersection point to the light source
-            shadowRay.maxt = (emitterQR_ls.p - its.p).norm();	// maxt is the distance between the intersection point and the light source (?)
-            // if the shadow ray doesnt intersect with the scene, or if it intersects after the light source, then the point is not in shadow
-            Color3f L_ls(0.0f);
-            Intersection shadowIts;
-            bool inShadow = scene->rayIntersect(shadowRay, shadowIts);
-            if (!inShadow || (shadowIts.t >= (emitterQR_ls.dist - Epsilon))) {
-                BSDFQueryRecord bsdfQR_ls(its.toLocal(-bouncyRay.d), its.toLocal(emitterQR_ls.wi), its.uv, ESolidAngle);
-                float denominator = pdflight * emitterQR_ls.pdf;
-                if (denominator > Epsilon){	// to avoid division by 0 (resulting in NaNs and anoying warnings)
-                    // emitterQR_ls.dist = its.t;
-                    Color3f bsdf = its.mesh->getBSDF()->eval(bsdfQR_ls);
-                    // update the color
-                    Lo += throughput * (Le * its.shFrame.n.dot(emitterQR_ls.wi) * bsdf) / denominator;
+            // we will only do light sampling if the BSDF is not perfectly smooth
+            if (sampleLights) {
+                // randomly choose an emitter and add its contribution to the throughput
+                float pdflight;	// this is the probability density of choosing a light source
+                EmitterQueryRecord emitterQR_ls(its.p);	// add intersection point to emitterRecord
+                const Emitter* em = scene->sampleEmitter(sampler->next1D(), pdflight); 		// sample a random light source
+                Color3f Le = em->sample(emitterQR_ls, sampler->next2D(), 0.);	// radiance of the light source
+                Ray3f shadowRay(its.p, emitterQR_ls.wi); // shadow ray that goes from the intersection point to the light source
+                shadowRay.maxt = (emitterQR_ls.p - its.p).norm();	// maxt is the distance between the intersection point and the light source (?)
+                // if the shadow ray doesnt intersect with the scene, or if it intersects after the light source, then the point is not in shadow
+                Color3f L_ls(0.0f);
+                Intersection shadowIts;
+                bool inShadow = scene->rayIntersect(shadowRay, shadowIts);
+                if (!inShadow || (shadowIts.t >= (emitterQR_ls.dist - Epsilon))) {
+                    BSDFQueryRecord bsdfQR_ls(its.toLocal(-bouncyRay.d), its.toLocal(emitterQR_ls.wi), its.uv, ESolidAngle);
+                    float denominator = pdflight * emitterQR_ls.pdf;
+                    if (denominator > Epsilon){	// to avoid division by 0 (resulting in NaNs and anoying warnings)
+                        // emitterQR_ls.dist = its.t;
+                        Color3f bsdf = its.mesh->getBSDF()->eval(bsdfQR_ls);
+                        // update the color
+                        Lo += w_lights * throughput * (Le * its.shFrame.n.dot(emitterQR_ls.wi) * bsdf) / denominator;
+                    }
                 }
             }
-
             /* RUSSIAN ROULETTE */
             if (depth > 2) {    // we want to ensure that the path has at least  bounces
                 // start the russian roulette
