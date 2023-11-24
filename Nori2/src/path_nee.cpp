@@ -30,18 +30,8 @@ public:
             /*
             *   NOW WE HAVE AN INTERSECTION
             */
-
-            /* BSDF SAMPLING */
-            Color3f L_bs(0.0f);
             Point2f sample = sampler->next2D();
             BSDFQueryRecord bsdfQR(its.toLocal(-bouncyRay.d), sample);
-            Color3f bsdfSample = its.mesh->getBSDF()->sample(bsdfQR, sample);
-            // if the bsdf is 0, we stop the loop
-            if (bsdfSample.isZero() || bsdfSample.hasNaN()) {
-                break;
-            }
-            // in any case, we need to update the throughput
-            throughput *= bsdfSample;
             // if the ray intersects with an emitter, we will add the radiance of the emitter (if it's not perfect smooth)
             if (its.mesh->isEmitter()) {
                 EmitterQueryRecord emitterQR(its.p);
@@ -53,6 +43,16 @@ public:
                 }
             }
 
+            /* BSDF SAMPLING */
+            Color3f L_bs(0.0f);
+            Color3f bsdfSample = its.mesh->getBSDF()->sample(bsdfQR, sample);
+
+            if (bsdfSample.isZero() || bsdfSample.hasNaN()) {
+                break;
+            }
+            // in any case, we need to update the throughput
+            throughput *= bsdfSample;
+            
             /* LIGHT SAMPLING */
             // randomly choose an emitter and add its contribution to the throughput
             float pdflight;	// this is the probability density of choosing a light source

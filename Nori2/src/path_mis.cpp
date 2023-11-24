@@ -20,6 +20,7 @@ public:
         float survivalProb;
         while (true) {
             Intersection its;
+            float w_mats = 0.f, w_lights = 0.f;
             if (!scene->rayIntersect(bouncyRay, its)) {
                 // if the ray doesnt intersect with nothing, we will add the background color
                 // to the radiance we will return
@@ -30,18 +31,8 @@ public:
             /*
             *   NOW WE HAVE AN INTERSECTION
             */
-
-            /* BSDF SAMPLING */
-            Color3f L_bs(0.0f);
             Point2f sample = sampler->next2D();
             BSDFQueryRecord bsdfQR(its.toLocal(-bouncyRay.d), sample);
-            Color3f bsdfSample = its.mesh->getBSDF()->sample(bsdfQR, sample);
-            // if the bsdf is 0, we stop the loop
-            if (bsdfSample.isZero() || bsdfSample.hasNaN()) {
-                break;
-            }
-            // in any case, we need to update the throughput
-            throughput *= bsdfSample;
             // if the ray intersects with an emitter, we will add the radiance of the emitter (if it's not perfect smooth)
             if (its.mesh->isEmitter()) {
                 EmitterQueryRecord emitterQR(its.p);
@@ -51,10 +42,26 @@ public:
                 if (bsdfQR.measure != EDiscrete) {
                     float p_mat_mat = its.mesh->getBSDF()->pdf(bsdfQR);
                     float p_em_mat = its.mesh->getEmitter()->pdf(emitterQR);
-                    float w_mats = p_mat_mat / (p_em_mat + p_mat_mat);
-                    Lo += w_mats * its.mesh->getEmitter()->eval(emitterQR) * throughput;
+                    if (p_em_mat + p_mat_mat > Epsilon)
+                        w_mats = p_mat_mat / (p_em_mat + p_mat_mat);
+                    else
+                        w_mats = 1.0f;
+                } else {
+                    w_mats = 1.0f;
                 }
+                Color3f Le = its.mesh->getEmitter()->eval(emitterQR);
+                Lo += throughput * Le * w_mats;
             }
+
+            /* BSDF SAMPLING */
+            Color3f L_bs(0.0f);
+            Color3f bsdfSample = its.mesh->getBSDF()->sample(bsdfQR, sample);
+            // if the bsdf is 0, we stop the loop
+            if (bsdfSample.isZero() || bsdfSample.hasNaN()) {
+                break;
+            }
+            // in any case, we need to update the throughput
+            throughput *= bsdfSample;
 
             /* LIGHT SAMPLING */
             // randomly choose an emitter and add its contribution to the throughput
@@ -76,7 +83,10 @@ public:
                     Color3f bsdf = its.mesh->getBSDF()->eval(bsdfQR_ls);
                     float p_em_em = pdflight * emitterQR_ls.pdf;
                     float p_mat_em = its.mesh->getBSDF()->pdf(bsdfQR_ls);
-                    float w_lights = p_em_em / (p_em_em + p_mat_em);
+                    if (p_em_em + p_mat_em > Epsilon)
+                        w_lights = p_em_em / (p_em_em + p_mat_em);
+                    else
+                        w_lights = p_em_em;
                     // update the color
                     Lo += w_lights * throughput * (Le * its.shFrame.n.dot(emitterQR_ls.wi) * bsdf) / denominator;
                 }
