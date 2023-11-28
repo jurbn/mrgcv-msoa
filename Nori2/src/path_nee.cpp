@@ -16,7 +16,7 @@ public:
         Color3f Lo(0.0f);   // the radiance we will return
         int depth = 1;
         Color3f throughput(1.0f);
-        Ray3f bouncyRay = ray;
+        Ray3f bouncyRay(ray);
         float survivalProb;
         while (true) {
             Intersection its;
@@ -32,7 +32,7 @@ public:
             */
             Point2f sample = sampler->next2D();
             BSDFQueryRecord bsdfQR(its.toLocal(-bouncyRay.d), sample);
-            int sampleLights = bsdfQR.measure != EDiscrete;
+            int sampleLights = (bsdfQR.measure != EDiscrete);
             float w_mats = sampleLights ? 0.5f : 1.0f;
             float w_lights = sampleLights ? 0.5f : 0.0f;
             // if the ray intersects with an emitter, we will add the radiance of the emitter (if it's not perfect smooth)
@@ -43,6 +43,7 @@ public:
                 emitterQR.ref = bouncyRay.o;
                 emitterQR.wi = bouncyRay.d;
                 emitterQR.n = its.shFrame.n;
+                emitterQR.uv = its.uv;
                 Lo += w_mats * its.mesh->getEmitter()->eval(emitterQR) * throughput;
                 break;
             }
@@ -71,7 +72,7 @@ public:
                 Color3f L_ls(0.0f);
                 Intersection shadowIts;
                 bool inShadow = scene->rayIntersect(shadowRay, shadowIts);
-                if (!inShadow || (shadowIts.t >= (emitterQR_ls.dist - Epsilon))) {
+                if (!inShadow) {
                     BSDFQueryRecord bsdfQR_ls(its.toLocal(-bouncyRay.d), its.toLocal(emitterQR_ls.wi), its.uv, ESolidAngle);
                     float denominator = pdflight * emitterQR_ls.pdf;
                     if (denominator > Epsilon){	// to avoid division by 0 (resulting in NaNs and anoying warnings)
