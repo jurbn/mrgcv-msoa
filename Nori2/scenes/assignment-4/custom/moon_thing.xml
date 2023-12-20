@@ -1,0 +1,87 @@
+<?xml version="1.0" ?>
+<scene>
+	<integrator type="path_mis"/>
+	<sampler type="independent">
+		<integer name="sampleCount" value="1024"/>
+	</sampler>
+	<camera type="perspective">
+		<float name="fov" value="39.597755335771296"/>
+		<float name="nearClip" value="0.10000000149011612"/>
+		<float name="farClip" value="100.0"/>
+		<integer name="width" value="800"/>
+		<integer name="height" value="600"/>
+		<transform name="toWorld">
+			<scale value="1.000000 1.000000 -1.000000"/>
+			<matrix value="1.910685676922942e-15,4.632211430296955e-23,1.0,32.0,-4.371138828673793e-08,1.0,4.632211430296955e-23,0.0,-1.0,-4.371138828673793e-08,1.910685676922942e-15,0.0,0.0,0.0,0.0,1.0"/>
+		</transform>
+	</camera>
+	<mesh type="obj">
+		<string name="filename" value="meshes/1226 Moon_Mat.obj"/>
+		<bsdf type="roughsubstrate" name="Mat">
+			<color name="albedo" value="0.282661,0.282661,0.282661"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Sphere.001_Blue_Light.001.obj"/>
+		<bsdf type="diffuse" name="Blue_Light.001">
+			<color name="albedo" value="0.800000,0.800000,0.800000"/>
+		</bsdf>
+		<emitter type="area">
+			<color name="radiance" value="0.000000,0.000000,20.000000"/>
+		</emitter>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Sphere.002_Blue_Light.002.obj"/>
+		<bsdf type="diffuse" name="Blue_Light.002">
+			<color name="albedo" value="0.800000,0.800000,0.800000"/>
+		</bsdf>
+		<emitter type="area">
+			<color name="radiance" value="20.000000,0.5,0.000000"/>
+		</emitter>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Sphere.003_Blue_Light.003.obj"/>
+		<bsdf type="diffuse" name="Blue_Light.003">
+			<color name="albedo" value="0.800000,0.800000,0.800000"/>
+		</bsdf>
+		<emitter type="area">
+			<color name="radiance" value="50.000000,0.0,0.000000"/>
+		</emitter>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Sphere.004_Blue_Light.004.obj"/>
+		<bsdf type="diffuse" name="Blue_Light.004">
+			<color name="albedo" value="0.800000,0.800000,0.800000"/>
+		</bsdf>
+		<emitter type="area">
+			<color name="radiance" value="0.000000,20.000000,0.000000"/>
+		</emitter>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Sphere.005_Blue_Light.005.obj"/>
+		<bsdf type="diffuse" name="Blue_Light.005">
+			<color name="albedo" value="0.800000,0.800000,0.800000"/>
+		</bsdf>
+		<emitter type="area">
+			<color name="radiance" value="20.000000,20.000000,0.000000"/>
+		</emitter>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Sphere.007_Blue_Light.007.obj"/>
+		<bsdf type="diffuse" name="Blue_Light.007">
+			<color name="albedo" value="0.800000,0.800000,0.800000"/>
+		</bsdf>
+		<emitter type="area">
+			<color name="radiance" value="10.000000,0.000000,20.000000"/>
+		</emitter>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Cube_Material.002.obj"/>
+		<bsdf type="diffuse" name="Material.002">
+			<color name="albedo" value="0.800000,0.800000,0.800000"/>
+		</bsdf>
+		<emitter type="area">
+			<color name="radiance" value="1.000000,1.000000,1.000000"/>
+		</emitter>
+	</mesh>
+</scene>

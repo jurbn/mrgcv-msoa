@@ -72,6 +72,7 @@ public:
                     }
                 }
                 Lo += w_mat * throughput * its_new.mesh->getEmitter()->eval(emitterQR);
+                break;
             }
             if (!isDelta){
                 float pdf_emitter;
@@ -91,11 +92,12 @@ public:
                         float pdf_bsdf = its_og.mesh->getBSDF()->pdf(bsdfQR_ls);    // prob of sampling the light direction by BSDF sampling
                         pdf_emitter = em->pdf(emitterQR_ls);    // prob of sampling the light direction by light sampling
                         float w_em_den = pdf_emitter + pdf_bsdf;
+                        float w_em = 0.0f;
                         if (w_em_den > Epsilon) {
-                            float w_em = pdf_emitter / w_em_den;
-                            Color3f L_ls = (Le * its_og.shFrame.n.dot(emitterQR_ls.wi) * bsdf) / ls_den;
-                            Lo += w_em * throughput * L_ls;
+                            w_em = pdf_emitter / w_em_den;
                         }
+                        Color3f L_ls = (Le * its_og.shFrame.n.dot(emitterQR_ls.wi) * bsdf) / ls_den;
+                        Lo += w_em * throughput * L_ls;
                     }
                 }
             }
