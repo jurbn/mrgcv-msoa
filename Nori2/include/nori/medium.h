@@ -4,6 +4,15 @@
 
 NORI_NAMESPACE_BEGIN
 
+struct MediumQueryRecord
+{
+    MediumQueryRecord() : t(0.0f), phaseFunction(nullptr) { }
+    MediumQueryRecord(float t, const PhaseFunction *phaseFunction) : t(t), phaseFunction(phaseFunction) { }
+
+    float t;                                ///< The distance to the next medium interaction
+    const PhaseFunction *phaseFunction;     ///< The phase function of the medium
+};
+
 class Medium : public NoriObject {
 public:
     /**
@@ -20,7 +29,7 @@ public:
      * \return
      * True if a distance was sampled, false otherwise
     */
-    virtual bool sampleDistance(const Ray3f &ray, Sampler *sampler, float &t, Color3f &weight) const = 0;
+    virtual bool sampleDistance(const Ray3f &ray, Sampler *sampler, float &t) const = 0;
 
     /**
      * \brief
@@ -50,10 +59,11 @@ public:
     EClassType getClassType() const { return EMedium; }
 
     // Return a human-readable summary
-    std::string toString() const = 0;
+    // virtual std::string toString() const = 0;
 
 protected:
     PhaseFunction *m_phaseFunction;         ///< The phase function of the medium
+    // Mesh *m_mesh;                           ///< The mesh that defines the volume of the medium
 };
 
 NORI_NAMESPACE_END

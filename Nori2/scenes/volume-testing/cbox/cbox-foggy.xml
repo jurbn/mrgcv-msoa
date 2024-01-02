@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 
 <scene>
-	<integrator type="path_mis"/>
+	<integrator type="path_media"/>
 
 	<camera type="perspective">
 		<float name="fov" value="27.7856"/>
@@ -15,7 +15,7 @@
 	</camera>
 
 	<sampler type="independent">
-		<integer name="sampleCount" value="16"/>
+		<integer name="sampleCount" value="64"/>
 	</sampler>
 
 	<medium type="homogeneous">
@@ -30,10 +30,10 @@
         <color name="sigmaS" value="1, 1, 1"/>
  
         <!-- Instantiate a Henyey-Greenstein phase function -->
-        <phase type="isotropic">
-            <!-- Configure as slightly forward-scattering -->
+        <!-- <phase type="isotropic">
+            Configure as slightly forward-scattering
             <float name="g" value="0.5"/>
-        </phase>
+        </phase> -->
     </medium>
 
 	<mesh type="obj">

@@ -116,6 +116,7 @@ add_executable(nori
   # src/medium.cpp
   src/homogeneous.cpp
   src/isotropic.cpp
+  src/path_media.cpp
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})
