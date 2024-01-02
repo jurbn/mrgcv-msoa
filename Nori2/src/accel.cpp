@@ -302,6 +302,10 @@ void Accel::addMesh(Mesh *mesh) {
 	m_bbox.expandBy(mesh->getBoundingBox());
 }
 
+void Accel::addMedium(Medium *medium) {
+	m_mediums.push_back(medium);
+}
+
 void Accel::clear() {
 	for (auto mesh : m_meshes)
 		delete mesh;

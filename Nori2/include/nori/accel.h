@@ -19,6 +19,7 @@
 #pragma once
 
 #include <nori/mesh.h>
+#include <nori/medium.h>
 
 NORI_NAMESPACE_BEGIN
 
@@ -46,6 +47,11 @@ public:
 	 * This function can only be used before \ref build() is called
 	 */
 	void addMesh(Mesh *mesh);
+
+	/**
+	 * \brief Register a medium.
+	*/
+	void addMedium(Medium *medium);
 
 	/// Build the BVH
 	void build();
@@ -152,6 +158,7 @@ protected:
 	};
 private:
 	std::vector<Mesh *> m_meshes;       ///< List of meshes registered with the BVH
+	std::vector<Medium *> m_mediums;    ///< List of mediums registered with the BVH
 	std::vector<n_UINT> m_meshOffset; ///< Index of the first triangle for each shape
 	std::vector<BVHNode> m_nodes;       ///< BVH nodes
 	std::vector<n_UINT> m_indices;    ///< Index references by BVH nodes

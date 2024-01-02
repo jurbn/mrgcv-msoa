@@ -69,6 +69,9 @@ add_executable(nori
 
   include/nori/reflectance.h
 
+  include/nori/medium.h
+  include/nori/phase.h
+
   # Source code files
   src/accel.cpp
   src/area.cpp
@@ -109,6 +112,10 @@ add_executable(nori
   src/path.cpp
   src/path_nee.cpp
   src/path_mis.cpp
+
+  # src/medium.cpp
+  src/homogeneous.cpp
+  src/isotropic.cpp
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})

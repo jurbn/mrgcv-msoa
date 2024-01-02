@@ -22,6 +22,7 @@
 #pragma once
 
 #include <nori/accel.h>
+#include "medium.h"
 
 NORI_NAMESPACE_BEGIN
 
@@ -140,6 +141,7 @@ private:
     std::vector<Mesh *> m_meshes;
 	std::vector<Emitter *> m_emitters;
 	Emitter *m_enviromentalEmitter = nullptr;
+    std::vector<Medium *> m_mediums;
 	
     Integrator *m_integrator = nullptr;
     Sampler *m_sampler = nullptr;

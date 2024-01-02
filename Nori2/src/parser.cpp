@@ -309,8 +309,7 @@ NoriObject *loadFromXML(const std::string &filename) {
 
                             transform = Eigen::Affine3f(trafo) * transform;
                         }
-                        break;
-
+                        break; 
                     default: throw NoriException("Unhandled element \"%s\"", node.name());
                 };
             }

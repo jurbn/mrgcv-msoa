@@ -121,6 +121,13 @@ void Scene::addChild(NoriObject *obj, const std::string& name) {
                 throw NoriException("There can only be one integrator per scene!");
             m_integrator = static_cast<Integrator *>(obj);
             break;
+        
+        case EMedium: {
+                Medium *medium = static_cast<Medium *>(obj);
+                m_accel->addMedium(medium);     // i use m_accel for the integrator to interact with the medium
+                m_mediums.push_back(medium);
+            }
+            break;
 
         default:
             throw NoriException("Scene::addChild(<%s>) is not supported!",
