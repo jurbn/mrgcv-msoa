@@ -33,11 +33,12 @@ public:
             }
             // first, check if the ray intersects a medium (intersection's pointer to medium is not null)
             MediumQueryRecord mediumQR;
-            if (its.medium) {
+            if (its.mesh->isMedium()) {
                 // Sample medium using delta tracking
                 float t;
                 Color3f weight;
-                bool sampled = its.medium->sampleDistance(bouncyRay, sampler, t);
+                std::string mediumSpecs = its.mesh->getMedium()->toString();
+                bool sampled = its.mesh->getMedium()->sampleDistance(bouncyRay, sampler, t);
                 if (!sampled) {
                     break;
                 }
@@ -46,7 +47,7 @@ public:
                 // update the ray
                 bouncyRay = Ray3f(bouncyRay.o + bouncyRay.d * t, bouncyRay.d);
                 // update the radiance (this is done using the Radiative Transfer Equation)
-                Lo += throughput * its.medium->evalTransmittance(bouncyRay, sampler);
+                Lo += throughput * its.mesh->getMedium()->evalTransmittance(bouncyRay, sampler);
             }
             // the rest will be done like in the `PathTracing` integrator
 

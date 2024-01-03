@@ -51,7 +51,8 @@ struct Intersection {
     Frame geoFrame;
     /// Pointer to the associated mesh
     const Mesh *mesh;
-    // Pointer to the associated medium
+
+    /// Pointer to the associated medium
     const Medium* medium;
 
     /// Create an uninitialized intersection record
@@ -165,6 +166,12 @@ public:
     /// Return a pointer to the BSDF associated with this mesh
     const BSDF *getBSDF() const { return m_bsdf; }
 
+    /// Return a pointer to the medium associated with this mesh
+    const Medium* getMedium() const { return m_medium; }
+
+    /// Return a boolean indicating whether this mesh has a medium associated with it
+    bool isMedium() const { return m_medium != nullptr; }
+
     /// Register a child object (e.g. a BSDF) with the mesh
     virtual void addChild(NoriObject *child, const std::string& name = "none");
 
@@ -194,6 +201,7 @@ protected:
     Emitter      *m_emitter = nullptr;   ///< Associated emitter, if any
     BoundingBox3f m_bbox;                ///< Bounding box of the mesh
     DiscretePDF  m_pdf;                  ///< Discrete pdf for sampling triangles uniformly wrt their area. 
+    Medium* m_medium = nullptr;          ///< Associated medium, if any
 };
 
 NORI_NAMESPACE_END

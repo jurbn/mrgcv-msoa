@@ -1,5 +1,4 @@
 #include <nori/medium.h>
-#include <nori/phase.h>
 #include <nori/sampler.h>
 #include <cmath>
 
@@ -13,7 +12,6 @@ public:
         m_mediumToWorld = propList.getTransform("toWorld", Transform().inverse());
 		m_sigmaT = m_sigmaA + m_sigmaS;
 		m_phaseFunction = nullptr;
-		// m_mesh = propList.getObject<Mesh>("mesh", nullptr);
     }
 
 
@@ -22,11 +20,8 @@ public:
 		// this is done using delta tracking
 		// 1. sample the distance to the next medium interaction
 		t = static_cast<float>(-std::log(1 - sampler->next1D()) / m_sigmaT.getLuminance());
-
-		// 2. check if the ray intersects with the medium
-		if (t > ray.maxt) {
-			return false;
-		}
+		// 2. check if the ray is still inside the medium
+		
 		return true;
 	}
 
@@ -34,7 +29,9 @@ public:
 		// this will evaluate the transmittance along the path segment defined by the ray
 		// this is done using the Radiative Transfer Equation
 		// repeat until the ray exits the medium
+		// printf("evalTransmittance\n");
 		Ray3f mediumRay(ray);
+		int steps = 0;
 		// initialize the transmittance
 		Color3f transmittance(1.0f);
 		while (true){
@@ -42,10 +39,15 @@ public:
 			float t;
 			bool sampled = sampleDistance(ray, sampler, t);
 			if (!sampled) {	// if the ray doesnt intersect with nothing, we're out of the medium
+				printf("evalTransmittance: not sampled with t = %f\n", t);
 				break;
 			}
+			// printf("evalTransmittance: sampled, t = %f\n", t);
 			// 2. update the ray (because we are in the medium, the origin of the ray is the point of intersection)
 			mediumRay = Ray3f(mediumRay.o + mediumRay.d * t, mediumRay.d);
+			std::string rayOrigin = mediumRay.o.toString();
+			printf("evalTransmittance: mediumRay.o = %s\n", rayOrigin.c_str());
+			//std::cout << "mediumRay.o = " << mediumRay.o << std::endl;
 			// create a PhaseFunctionQueryRecord with the sampled direction
 			PhaseFunctionQueryRecord pRec(mediumRay.d);
 			// 3. update the transmittance by using the Radiative Transfer Equation
@@ -55,7 +57,9 @@ public:
 			Color3f emission = m_sigmaA * m_phaseFunction->eval(pRec);
 			// update the transmittance
 			transmittance *= (inScattering + emission);
+			steps++;
 		}
+		printf("evalTransmittance: transmittance = %s, steps = %d\n", transmittance.toString(), steps);
 		return transmittance;
 	}
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <nori/object.h>
+#include <nori/phase.h>
 
 NORI_NAMESPACE_BEGIN
 
@@ -62,8 +63,8 @@ public:
     // virtual std::string toString() const = 0;
 
 protected:
-    PhaseFunction *m_phaseFunction;         ///< The phase function of the medium
-    // Mesh *m_mesh;                           ///< The mesh that defines the volume of the medium
+    PhaseFunction *m_phaseFunction;     ///< The phase function of the medium
+    Mesh *m_mesh;                       ///< The bounding mesh of the medium
 };
 
 NORI_NAMESPACE_END

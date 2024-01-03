@@ -15,26 +15,8 @@
 	</camera>
 
 	<sampler type="independent">
-		<integer name="sampleCount" value="64"/>
+		<integer name="sampleCount" value="1"/>
 	</sampler>
-
-	<medium type="homogeneous">
-        <!-- By default, the medium occupies the region [0,0,0]-[1,1,1]. Scale and rotate it: -->
-        <transform name="toWorld">
-            <scale value="5,5,5"/>
-            <rotate axis="0,1,0" angle="45"/>
-        </transform>
-  
-        <!-- Absorption and scattering coefficients -->
-        <color name="sigmaA" value="0.01,0.01,0.01"/>
-        <color name="sigmaS" value="1, 1, 1"/>
- 
-        <!-- Instantiate a Henyey-Greenstein phase function -->
-        <!-- <phase type="isotropic">
-            Configure as slightly forward-scattering
-            <float name="g" value="0.5"/>
-        </phase> -->
-    </medium>
 
 	<mesh type="obj">
 		<string name="filename" value="meshes/walls.obj"/>
@@ -66,6 +48,23 @@
 		<bsdf type="diffuse">
 			<color name="albedo" value="0.725 0.71 0.68"/>
 		</bsdf>
+		<medium type="homogeneous">
+			<!-- By default, the medium occupies the region [0,0,0]-[1,1,1]. Scale and rotate it: -->
+			<transform name="toWorld">
+				<scale value="5,5,5"/>
+				<rotate axis="0,1,0" angle="45"/>
+			</transform>
+	
+			<!-- Absorption and scattering coefficients -->
+			<color name="sigmaA" value="0.01,0.01,0.01"/>
+			<color name="sigmaS" value="1, 1, 1"/>
+	
+			<!-- Instantiate a Henyey-Greenstein phase function -->
+			<!-- <phase type="isotropic">
+				Configure as slightly forward-scattering
+				<float name="g" value="0.5"/>
+			</phase> -->
+    	</medium>
 	</mesh>
 
 	<mesh type="obj">

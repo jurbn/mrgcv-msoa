@@ -25,6 +25,7 @@
 #include <nori/bsdf.h>
 #include <nori/emitter.h>
 #include <nori/warp.h>
+#include <nori/medium.h>
 #include <Eigen/Geometry>
 
 NORI_NAMESPACE_BEGIN
@@ -186,6 +187,15 @@ void Mesh::addChild(NoriObject *obj, const std::string& name) {
                 m_emitter = emitter;
             }
             break;
+        
+        case EMedium: {
+                Medium *medium = static_cast<Medium *>(obj);
+                if (m_medium)
+                    throw NoriException(
+                        "Mesh: tried to register multiple Medium instances!");
+                m_medium = medium;
+            }
+            break;
 
         default:
             throw NoriException("Mesh::addChild(<%s>) is not supported!",
@@ -200,13 +210,15 @@ std::string Mesh::toString() const {
         "  vertexCount = %i,\n"
         "  triangleCount = %i,\n"
         "  bsdf = %s,\n"
-        "  emitter = %s\n"
+        "  emitter = %s,\n"
+        "  medium = %s\n"
         "]",
         m_name,
         m_V.cols(),
         m_F.cols(),
         m_bsdf ? indent(m_bsdf->toString()) : std::string("null"),
-        m_emitter ? indent(m_emitter->toString()) : std::string("null")
+        m_emitter ? indent(m_emitter->toString()) : std::string("null"),
+        m_medium ? indent(m_medium->toString()) : std::string("null")
     );
 }
 
@@ -221,14 +233,16 @@ std::string Intersection::toString() const {
         "  uv = %s,\n"
         "  shFrame = %s,\n"
         "  geoFrame = %s,\n"
-        "  mesh = %s\n"
+        "  mesh = %s,\n"
+        "  medium = %s\n"
         "]",
         p.toString(),
         t,
         uv.toString(),
         indent(shFrame.toString()),
         indent(geoFrame.toString()),
-        mesh ? mesh->toString() : std::string("null")
+        mesh ? mesh->toString() : std::string("null"),
+        medium ? medium->toString() : std::string("null")
     );
 }
 
