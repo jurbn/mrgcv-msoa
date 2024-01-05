@@ -443,6 +443,8 @@ bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) c
 					ray.maxt = its.t = t;
 					its.uv = Point2f(u, v);
 					its.mesh = mesh;
+					// ADD THE MEDIUM TOO
+					its.medium = mesh->getMedium();
 					f = idx;
 				}
 			}

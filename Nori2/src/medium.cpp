@@ -12,7 +12,7 @@ Medium::~Medium() {
 void Medium::activate() {
     // If no phase function was specified, instantiate an isotropic one
     if (!m_phaseFunction) {
-        m_phaseFunction = static_cast<PhaseFunction *>(NoriObjectFactory::createInstance("isotropic", PropertyList()));
+        m_phaseFunction = static_cast<PhaseFunction *>(NoriObjectFactory::createInstance("henyey_greenstein", PropertyList()));
     }
 }
 

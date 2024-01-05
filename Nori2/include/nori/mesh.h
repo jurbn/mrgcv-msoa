@@ -166,8 +166,11 @@ public:
     /// Return a pointer to the BSDF associated with this mesh
     const BSDF *getBSDF() const { return m_bsdf; }
 
+    /// Return a pointer to the medium associated with this mesh (const version)
+    const Medium *getMedium() const { return m_medium; }
+
     /// Return a pointer to the medium associated with this mesh
-    const Medium* getMedium() const { return m_medium; }
+    Medium *getMedium() { return m_medium; }
 
     /// Return a boolean indicating whether this mesh has a medium associated with it
     bool isMedium() const { return m_medium != nullptr; }
@@ -200,8 +203,8 @@ protected:
     BSDF         *m_bsdf = nullptr;      ///< BSDF of the surface
     Emitter      *m_emitter = nullptr;   ///< Associated emitter, if any
     BoundingBox3f m_bbox;                ///< Bounding box of the mesh
-    DiscretePDF  m_pdf;                  ///< Discrete pdf for sampling triangles uniformly wrt their area. 
-    Medium* m_medium = nullptr;          ///< Associated medium, if any
+    DiscretePDF   m_pdf;                 ///< Discrete pdf for sampling triangles uniformly wrt their area. 
+    Medium       *m_medium = nullptr;    ///< Associated medium, if any
 };
 
 NORI_NAMESPACE_END

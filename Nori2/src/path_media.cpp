@@ -3,94 +3,101 @@
 #include <nori/scene.h>
 #include <nori/emitter.h>
 #include <nori/bsdf.h>
-#include <nori/medium.h>
-#include <nori/phase.h>
 
 NORI_NAMESPACE_BEGIN
-class PathTracingMedia: public Integrator {
+
+class PathTracingMedia : public Integrator {
 public:
-    PathTracingMedia(const PropertyList &props) {
-        /* No parameters this time */
+	PathTracingMedia(const PropertyList& props) {
+		/* No parameters this time */
+	}
+
+    Color3f rayMarching(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
+        // starting from the point of intersection with the medium, will march inside the medium until it exits
+        // or until it gets extinguished by russian roulette
+        Color3f Lo(0.0f);   // the radiance we will return
+        // first, get the maximum distance the ray will travel inside the medium
+        Intersection its;
+        bool intersects = scene->rayIntersect(ray, its);
+        if (!intersects || its.medium == nullptr) {
+            // if the ray doesnt itersect with the medium, we assume it is out of the medium, so we will just continue with the path
+            return this->Li(scene, sampler, ray);
+        }
+        float tMax = its.t;
+        MediumQueryRecord mRec;
+        bool sampled = its.medium->sampleDistance(mRec, sampler);
+        if (!sampled || mRec.t >= tMax) { // if not sampled or the sampled distance is greater than the maximum distance, we're out of the medium
+            return this->Li(scene, sampler, Ray3f(ray.o + ray.d * tMax, ray.d));
+        }
+        // if sampled, update the ray
+        Ray3f rayMarchingRay(ray.o + ray.d * mRec.t, ray.d);
+        // apply the RTE
+        // in-scattering will be given by the scattering coefficient (sigmaS) and a new ray (sampled from the phase function) //
+        // first, sample the phase function
+        PhaseFunctionQueryRecord pRec(ray.d); // we need to pass the direction of the ray
+        its.medium->getPhaseFunction()->sample(pRec, sampler->next2D());
+        Ray3f inScatteringRay(ray.o, pRec.wo);
+        Lo += mRec.sigmaS * this->rayMarching(scene, sampler, inScatteringRay);
+        mRec.Le = Color3f(.0f, 1.f, .0f);
+        Lo += mRec.sigmaA * mRec.Le;
+        // out-scattering will be given by the extinction coefficient (sigmaT) and the ray
+        Lo *= mRec.sigmaT * mRec.t;
+        return Lo + this->rayMarching(scene, sampler, rayMarchingRay);
+    }
+
+    Color3f pathTracing(const Scene* scene, Sampler* sampler, const Ray3f& ray, const Intersection& its) const {
+        Color3f Lo(0.0f);   // the radiance we will return
+        Point2f sample = sampler->next2D();
+        BSDFQueryRecord bsdfQR(its.toLocal(-ray.d), sample);
+        Color3f brdfSample = its.mesh->getBSDF()->sample(bsdfQR, sample);
+        if (brdfSample.isZero() || brdfSample.hasNaN()) {   // if it is not valid, return black
+            return Lo;
+        }
+        Ray3f bouncedRay(its.p, its.toWorld(bsdfQR.wo));
+        // decide wether to continue or not via russian roulette
+        float survivalProb = std::min(brdfSample.maxCoeff(), 0.95f);
+        if (sampler->next1D() > survivalProb) {
+            return Lo;
+        }
+        Lo += brdfSample * this->Li(scene, sampler, bouncedRay);
+        return Lo;
     }
 
     Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
-        // this will implement the path tracing algorithm with support for participating media
-        Color3f Lo(0.0f);   // the radiance we will return
-        int depth = 1;
-        float survivalProb;
-        Color3f throughput(1.0f);
-        Ray3f bouncyRay = ray;
         Intersection its;
-        while (true) {
-            // get the intersection
-            bool intersects = scene->rayIntersect(bouncyRay, its);
-            if (!intersects) {
-                // if the ray doesnt intersect with nothing, we will add the background color
-                // to the radiance we will return
-                Color3f backgroundColor = scene->getBackground(bouncyRay);
-                Lo += backgroundColor * throughput;
-                break;
-            }
-            // first, check if the ray intersects a medium (intersection's pointer to medium is not null)
-            MediumQueryRecord mediumQR;
-            if (its.mesh->isMedium()) {
-                // Sample medium using delta tracking
-                float t;
-                Color3f weight;
-                std::string mediumSpecs = its.mesh->getMedium()->toString();
-                bool sampled = its.mesh->getMedium()->sampleDistance(bouncyRay, sampler, t);
-                if (!sampled) {
-                    break;
-                }
-                // update the throughput
-                throughput *= weight;
-                // update the ray
-                bouncyRay = Ray3f(bouncyRay.o + bouncyRay.d * t, bouncyRay.d);
-                // update the radiance (this is done using the Radiative Transfer Equation)
-                Lo += throughput * its.mesh->getMedium()->evalTransmittance(bouncyRay, sampler);
-            }
-            // the rest will be done like in the `PathTracing` integrator
-
-            if (its.mesh->isEmitter()) {
-                // if the ray intersects with an emitter, we will add the radiance of the emitter
-                // to the radiance we will return
+        /* PATH TERMINATION CASES */
+        if (!scene->rayIntersect(ray, its)) { // if no intersection, return background color
+            return scene->getBackground(ray);
+        }
+        if (its.mesh->isEmitter()) {    // if the intersection is an emitter, add the contribution
                 EmitterQueryRecord emitterQR(its.p);
-                emitterQR.ref = bouncyRay.o;
-                emitterQR.wi = bouncyRay.d;
                 emitterQR.n = its.shFrame.n;
-                Lo += its.mesh->getEmitter()->eval(emitterQR) * throughput;
-                break;
-            }
-            // if the ray intersects with a surface, we will sample the brdf
-            Point2f sample = sampler->next2D();
-            BSDFQueryRecord bsdfQR(its.toLocal(-bouncyRay.d), sample);
-            Color3f brdfSample = its.mesh->getBSDF()->sample(bsdfQR, sample);
-            // check if the brdf sample is valid (absorbed or invalid samples are not valid)
-            if (brdfSample.isZero() || brdfSample.hasNaN()) {   // if it is not valid, return black
-                break;
-            }
-            // now create a new ray with the sampled direction
-            bouncyRay = Ray3f(its.p, its.toWorld(bsdfQR.wo));
-            throughput *= brdfSample;
-            if (depth > 2) {    // we want to ensure that the path has at least  bounces
-                // start the russian roulette
-                // max component of the throughput will be the probability of survival (we cap it at 0.95)
-                survivalProb = std::min(throughput.maxCoeff(), 0.95f);
-                if (sampler->next1D() > survivalProb) { // this is the russian roulette
-                    break;  // if the ray dies, we stop the loop
-                } else {
-                    throughput /= survivalProb; // if the ray survives, we need to update the throughput
-                }
-            }
-            depth++;
+                emitterQR.ref = ray.o;
+                emitterQR.uv = its.uv;
+                emitterQR.wi = ray.d;
+                emitterQR.dist = its.t;
+                return its.mesh->getEmitter()->eval(emitterQR);
+        }
+
+        /* PATH CONTINUATION CASES */
+        Color3f Lo(0.0f);   // the radiance we will return
+        // intersected with a medium
+        if (its.medium != nullptr) {
+            // if i hit a medium, will start ray marching inside the medium
+            Ray3f mediumRay(its.p, ray.d);  // this ray's origin is the point of intersection with the medium
+            Lo = rayMarching(scene, sampler, mediumRay);
+            return Lo;
+        } else {
+            // if i hit a normal mesh, will continue the path
+            Ray3f pathRay(its.p, ray.d);
+            Lo = pathTracing(scene, sampler, pathRay, its);
         }
         return Lo;
     }
 
     std::string toString() const {
-        return "PathTracingMedia[]";
+        return "Direct Multiple Importance Sampling []";
     }
-
 };
 
 NORI_REGISTER_CLASS(PathTracingMedia, "path_media");

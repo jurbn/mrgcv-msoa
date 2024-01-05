@@ -12,16 +12,33 @@ public:
         m_mediumToWorld = propList.getTransform("toWorld", Transform().inverse());
 		m_sigmaT = m_sigmaA + m_sigmaS;
 		m_phaseFunction = nullptr;
+		m_Le = propList.getColor("Le", Color3f(0.0f));
     }
 
+	/**
+	 * \brief Sample a point inside the medium
+	*/
+	void sample(MediumQueryRecord &mRec, Sampler *sampler) const {
+		// this will sample a point inside the medium
+		// since this is an homogeneous medium, we will simply return the medium's properties
+		// regardless of the point we are sampling
+		mRec.sigmaA = m_sigmaA;
+		mRec.sigmaS = m_sigmaS;
+		mRec.sigmaT = m_sigmaT;
+		mRec.Le = m_Le;
+		mRec.phaseFunction = m_phaseFunction;
+	}
 
-	bool sampleDistance(const Ray3f &ray, Sampler *sampler, float &t) const {
-		// this will sample the distance to the next medium interaction along the given ray
-		// this is done using delta tracking
-		// 1. sample the distance to the next medium interaction
-		t = static_cast<float>(-std::log(1 - sampler->next1D()) / m_sigmaT.getLuminance());
-		// 2. check if the ray is still inside the medium
-		
+	// sampleDistance must select a next medium interaction and return the properties of that interaction (the return must be false if out of the medium)
+	bool sampleDistance(MediumQueryRecord &mRec, Sampler *sampler) const {
+		// to sample the distance to the next medium interaction, we will use delta tracking
+		// given the ray:
+		float t = -std::log(1 - sampler->next1D()) / m_sigmaT.getLuminance();  // this distance is sampled from an exponential distribution with parameter sigmaT
+		// check if the next point of intersection is inside the medium (if not, we're out of the medium)
+		sample(mRec, sampler);
+		// update the medium query record
+		mRec.t = t;
+		mRec.pdf = 1.0f;
 		return true;
 	}
 
@@ -30,14 +47,15 @@ public:
 		// this is done using the Radiative Transfer Equation
 		// repeat until the ray exits the medium
 		// printf("evalTransmittance\n");
-		Ray3f mediumRay(ray);
-		int steps = 0;
+		Ray3f mediumRay(ray);	// this ray's origin is the point of intersection with the medium (multiple steps)
+		int steps = 0;			// number of steps (debugging)
 		// initialize the transmittance
-		Color3f transmittance(1.0f);
+		Color3f transmittance(1.0f);	// this is the light coming from the medium (radiance)
 		while (true){
 			// 1. sample the distance to the next medium interaction
-			float t;
-			bool sampled = sampleDistance(ray, sampler, t);
+			MediumQueryRecord mRec;
+			bool sampled = sampleDistance(mRec, sampler);
+			float t = mRec.t;
 			if (!sampled) {	// if the ray doesnt intersect with nothing, we're out of the medium
 				printf("evalTransmittance: not sampled with t = %f\n", t);
 				break;
@@ -76,7 +94,7 @@ public:
 	void activate() {
 		// If no phase function was specified, instantiate an isotropic one
 		if (!m_phaseFunction) {
-			m_phaseFunction = static_cast<PhaseFunction *>(NoriObjectFactory::createInstance("isotropic", PropertyList()));
+			m_phaseFunction = static_cast<PhaseFunction *>(NoriObjectFactory::createInstance("henyey_greenstein", PropertyList()));
 		}
 	}
 
@@ -98,6 +116,7 @@ private:
 	Color3f m_sigmaA;			// absorption coefficient
 	Color3f m_sigmaT;			// extinction coefficient
 	Transform m_mediumToWorld;	// transform from medium to world space
+	Color3f m_Le;				// emission coefficient
 };
 
 NORI_REGISTER_CLASS(HomogeneousMedium, "homogeneous");

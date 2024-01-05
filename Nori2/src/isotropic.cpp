@@ -4,30 +4,41 @@
 */
 
 #include <nori/phase.h>
+#include <nori/warp.h>
 
 NORI_NAMESPACE_BEGIN
 
 class Isotropic : public PhaseFunction {
 public:
-    Isotropic(const PropertyList &propList) {
-        /* No parameters this time */
-    }
+	Isotropic(const PropertyList &) {
+		/* No parameters */
+	}
 
-    float sample(const PhaseFunctionQueryRecord &pRec, const Point2f &sample) const {
-        return 1.0f;
-    }
+	/// Evaluate the phase function
+	Color3f eval(const PhaseFunctionQueryRecord &) const {
+		return INV_FOURPI;
+	}
 
-    float eval(const PhaseFunctionQueryRecord &pRec) const {
-        return INV_FOURPI;
-    }
+	/// Compute the density of \ref sample() wrt. solid angles
+	float pdf(const PhaseFunctionQueryRecord &) const {
+		return INV_FOURPI;
+	}
 
-    float pdf(const PhaseFunctionQueryRecord &pRec) const {
-        return INV_FOURPI;
-    }
+	/// Draw a a sample from the phase function
+	Color3f sample(PhaseFunctionQueryRecord &pRec, const Point2f &sample) const {
+		pRec.wo = Warp::squareToUniformSphere(sample);
 
-    std::string toString() const {
-        return "IsotropicPhaseFunction[]";
-    }
+		/* eval() / pdf() = 1.0. There
+		   is no need to call these functions. */
+		return 1.0f;
+	}
+
+	/// Return a human-readable summary
+	std::string toString() const {
+		return std::string("Isotropic[]");
+	}
+
+	EClassType getClassType() const { return EPhaseFunction; }
 };
 
 NORI_REGISTER_CLASS(Isotropic, "isotropic");

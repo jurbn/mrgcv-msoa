@@ -27,7 +27,7 @@ public:
      * \return
      * The phase function value divided by the probability density of the sample.
     */
-    virtual float sample(const PhaseFunctionQueryRecord &pRec, const Point2f &sample) const = 0;
+    virtual Color3f sample(PhaseFunctionQueryRecord &pRec, const Point2f &sample) const = 0;
 
     /**
 	 * \brief Evaluate the phase function for a pair of directions 
@@ -38,7 +38,7 @@ public:
 	 * \return
 	 *     The phase function value, evaluated for each color channel
 	 */
-	virtual float eval(const PhaseFunctionQueryRecord &pRec) const = 0;
+	virtual Color3f eval(const PhaseFunctionQueryRecord &pRec) const = 0;
 
 	/**
 	 * \brief Compute the probability of sampling \c pRec.wo
