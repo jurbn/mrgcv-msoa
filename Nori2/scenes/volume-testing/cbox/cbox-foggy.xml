@@ -56,7 +56,7 @@
 			</transform>
 	
 			<!-- Absorption and scattering coefficients -->
-			<color name="sigmaA" value="1.0, 1.0, 1.0"/>
+			<color name="sigmaA" value="1.0, 3.0, 1.0"/>
 			<color name="sigmaS" value="0.5, 0.5, 0.5"/>
 	
 			<!-- Instantiate a Henyey-Greenstein phase function -->
@@ -75,11 +75,11 @@
 		</bsdf>
 	</mesh>
 
-	<mesh type="obj">
+	<!-- <mesh type="obj">
 		<string name="filename" value="meshes/light.obj"/>
 
 		<emitter type="area">
 			<color name="radiance" value="40 40 40"/>
 		</emitter>
-	</mesh>
+	</mesh> -->
 </scene>
