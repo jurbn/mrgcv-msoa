@@ -12,7 +12,7 @@ public:
 		/* No parameters this time */
 	}
 
-    Color3f rayMarching(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
+    Color3f rayMarching(const Scene* scene, Sampler* sampler, const Ray3f& ray, int depth=0) const {
         // starting from the point of intersection with the medium, will march inside the medium until it exits
         // or until it gets extinguished by russian roulette
         Color3f Lo(0.0f);   // the radiance we will return
@@ -25,6 +25,7 @@ public:
         }
         float tMax = its.t;
         MediumQueryRecord mRec;
+        mRec.p = its.p;
         bool sampled = its.medium->sampleDistance(mRec, sampler);
         if (!sampled || mRec.t >= tMax) { // if not sampled or the sampled distance is greater than the maximum distance, we're out of the medium
             return this->Li(scene, sampler, Ray3f(ray.o + ray.d * tMax, ray.d));
@@ -37,12 +38,16 @@ public:
         PhaseFunctionQueryRecord pRec(ray.d); // we need to pass the direction of the ray
         its.medium->getPhaseFunction()->sample(pRec, sampler->next2D());
         Ray3f inScatteringRay(ray.o, pRec.wo);
-        Lo += mRec.sigmaS * this->rayMarching(scene, sampler, inScatteringRay);
-        mRec.Le = Color3f(.0f, 1.f, .0f);
+        // decide by russian roulette if the ray gets in-scattered or not
+        float survivalProb = std::min(its.medium->getPhaseFunction()->eval(pRec).getLuminance()*1/depth, 0.95f);
+        if (depth < 3 || sampler->next1D() < survivalProb) {
+            Lo += mRec.sigmaS * this->rayMarching(scene, sampler, inScatteringRay, depth+1);
+        }
+        mRec.Le = Color3f(1.0f, 1.0f, 1.0f);
         Lo += mRec.sigmaA * mRec.Le;
         // out-scattering will be given by the extinction coefficient (sigmaT) and the ray
         Lo *= mRec.sigmaT * mRec.t;
-        return Lo + this->rayMarching(scene, sampler, rayMarchingRay);
+        return Lo + this->rayMarching(scene, sampler, rayMarchingRay, depth);
     }
 
     Color3f pathTracing(const Scene* scene, Sampler* sampler, const Ray3f& ray, const Intersection& its) const {

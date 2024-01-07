@@ -118,6 +118,7 @@ add_executable(nori
   src/isotropic.cpp
   src/path_media.cpp
   src/henyey_greenstein.cpp
+  src/heterogeneous.cpp
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})

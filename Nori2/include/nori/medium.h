@@ -22,6 +22,7 @@ struct MediumQueryRecord
     Color3f sigmaT;                         ///< The extinction coefficient of the medium interaction
     Color3f sigmaS;                         ///< The scattering coefficient of the medium interaction
     Color3f Le;                             ///< The emitted radiance of the medium interaction
+    Transform worldToMedium;                ///< The transformation from medium to world space 
 };
 
 class Medium : public NoriObject {
