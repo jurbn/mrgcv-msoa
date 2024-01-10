@@ -15,7 +15,7 @@ public:
 
     virtual ~DensityFunction() {}
 
-    virtual float sample (MediumQueryRecord &mRec) = 0;
+    virtual Vector4f sample (MediumQueryRecord &mRec) = 0;
 
     /**
      * \brief Return the type of object (i.e. Medium/Homogeneous/etc.)

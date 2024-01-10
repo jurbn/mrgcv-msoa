@@ -78,11 +78,32 @@ public:
      * \return
      * The sampled point's properties
     */
-    float sample(MediumQueryRecord &mRec) {
+    Vector4f sample(MediumQueryRecord &mRec) {
         // get the point in the medium
         Point3f p = mRec.worldToMedium.inverse().operator*(mRec.p);
         // get the noise value
-        return pnoise(p, frequency, octaves, persistance);
+        float noiseValue = pnoise(p, frequency, octaves, persistance);
+
+        // Map noise value to color transitions
+        float gradient = 0.85f-p.y(); // Create a gradient based on height
+        float gradientStep = 0.01f;
+
+        Vector4f brighterColor = Vector4f(1.0, 0.65, 0.1, 1.0);
+        Vector4f darkerColor = Vector4f(1.0, 0.0, 0.15, 0.0625);
+        Vector4f middleColor = brighterColor.cwiseProduct(darkerColor);
+
+        float firstStep = smoothstep(0.0, noiseValue, gradient);
+        float darkerColorStep = smoothstep(0.0, noiseValue, gradient - gradientStep);
+        float darkerColorPath = firstStep - darkerColorStep;
+        Vector4f color = mix(brighterColor, darkerColor, darkerColorPath);
+
+        float middleColorStep = smoothstep(0.0, noiseValue, gradient - 0.2 * 2.0);
+
+        color = mix(color, middleColor, darkerColorStep - middleColorStep);
+        color = mix(Vector4f(0.0), color, firstStep);
+
+        // Apply color based on the noise value and the gradient
+        return color;
     }
 
     std::string toString() const {
@@ -96,6 +117,13 @@ protected:
     int octaves;    // Number of octaves
     float persistance;    // Persistance of the noise
     float frequency;    // Frequency of the noise
+
+    float smoothstep(float edge0, float edge1, float x) {
+        // Scale x to the range [0, 1]
+        x = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+        // Smooth interpolation function
+        return x * x * (3 - 2 * x);
+    }
 
     float dot (Point3f p1, Point3f p2) {
         return p1.x() * p2.x() + p1.y() * p2.y() + p1.z() * p2.z();
@@ -115,6 +143,10 @@ protected:
     }
 
     float mix(float x, float y, float a) {
+        return x * (1.0 - a) + y * a;
+    }
+
+    Vector4f mix(Vector4f x, Vector4f y, float a) {
         return x * (1.0 - a) + y * a;
     }
 

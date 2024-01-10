@@ -17,6 +17,7 @@ public:
      * intersection with the medium until it exits or until it gets extinguished by russian roulette
     */
     Color3f rayMarching(const Scene* scene, Sampler* sampler, const Ray3f& ray, int depth=0) const {
+        //printf("rayMarching\n");
         Color3f Lo(0.0f);   // the radiance we will return
         Intersection itsCheck;
         bool intersects = scene->rayIntersect(ray, itsCheck);
@@ -34,21 +35,27 @@ public:
         
         // now I can apply the RTE for this point
         // in-scattering
+        //printf("rayMarching: in-scattering\n");
         Color3f Lis(0.0f);  // in-scattering radiance
         PhaseFunctionQueryRecord pRec(ray.d); // we need to pass the direction of the ray
+        //printf("rayMarching: sampling phase function\n");
         itsCheck.medium->getPhaseFunction()->sample(pRec, sampler->next2D()); // this will return a new direction for the in-scattered ray
         // decide by russian roulette if the point gets in-scattered or not (the more depth, the less probability)
+        //printf("rayMarching: russian roulette\n");
         float survivalProb = std::min(itsCheck.medium->getPhaseFunction()->eval(pRec).getLuminance()/(depth), 0.99f);
+        //printf("rayMarching: survivalProb = %f\n", survivalProb);
         if (depth < 3 || sampler->next1D() < survivalProb) {
             Ray3f inScatteringRay(ray.o, pRec.wo);
             Lis = mRec.sigmaS * this->rayMarching(scene, sampler, inScatteringRay, depth+1);
             Lis *= survivalProb;
         }
         // light emission of my point in the medium
+        //printf("rayMarching: light emission\n");
         Color3f Le = mRec.sigmaA * mRec.Le;
 
         // continue with ray marching
         // store the distance to the next medium interaction (random)
+        //printf("rayMarching: ray marching\n");
         float t = -std::log(1 - sampler->next1D()) / mRec.sigmaT.getLuminance();
         mRec.t = t > tMax ? tMax : t;   // careful not to go beyond the maximum distance
         Ray3f rayMarchingRay(ray.o + ray.d * mRec.t, ray.d);    // new ray!
