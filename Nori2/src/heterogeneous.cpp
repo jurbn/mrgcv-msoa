@@ -1,5 +1,6 @@
 #include <nori/medium.h>
 #include <nori/sampler.h>
+#include <nori/density.h>
 #include <cmath>
 
 NORI_NAMESPACE_BEGIN
@@ -13,6 +14,7 @@ public:
 		m_sigmaT = m_sigmaA + m_sigmaS;
 		m_phaseFunction = nullptr;
 		m_Le = propList.getColor("Le", Color3f(0.0f));
+		m_densityFunction = nullptr;
     }
 
 	/**
@@ -20,7 +22,9 @@ public:
 	*/
 	void sample(MediumQueryRecord &mRec, Sampler *sampler) const {
 		// we will sample a point inside the medium and obtain its properties via the density function
-        bool sampled = m_densityFunction->sample(mRec);
+        float sample_value = m_densityFunction->sample(mRec);
+		// we will map the sampled value to the medium's properties
+		
 	}
 
 	// sampleDistance must select a next medium interaction and return the properties of that interaction (the return must be false if out of the medium)
@@ -111,6 +115,7 @@ private:
 	Color3f m_sigmaT;			// extinction coefficient
 	Transform m_mediumToWorld;	// transform from medium to world space
 	Color3f m_Le;				// emission coefficient
+	DensityFunction *m_densityFunction;	// the density function of the medium
 };
 
 NORI_REGISTER_CLASS(HeterogeneousMedium, "heterogeneous");

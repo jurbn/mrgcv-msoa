@@ -15,7 +15,7 @@
 	</camera>
 
 	<sampler type="independent">
-		<integer name="sampleCount" value="1024"/>
+		<integer name="sampleCount" value="128"/>
 	</sampler>
 
 	<mesh type="obj">
@@ -48,8 +48,7 @@
 		<bsdf type="diffuse">
 			<color name="albedo" value="0.725 0.71 0.68"/>
 		</bsdf>
-		<medium type="homogeneous">
-			<!-- By default, the medium occupies the region [0,0,0]-[1,1,1]. Scale and rotate it: -->
+		<medium type="heterogeneous">
 			<transform name="toWorld">
 				<scale value="5,5,5"/>
 				<rotate axis="0,1,0" angle="45"/>

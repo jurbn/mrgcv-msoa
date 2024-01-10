@@ -119,6 +119,7 @@ add_executable(nori
   src/path_media.cpp
   src/henyey_greenstein.cpp
   src/heterogeneous.cpp
+  src/perlin.cpp
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})

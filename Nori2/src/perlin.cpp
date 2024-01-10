@@ -1,4 +1,5 @@
 #include <nori/density.h>
+#include <nori/medium.h>
 
 NORI_NAMESPACE_BEGIN
 
@@ -13,11 +14,7 @@ public:
 
     virtual ~PerlinNoise() {}
 
-// Hermite interpolation function
-    float hermite(float t) {
-        return t * t * (3.0 - 2.0 * t);
-    }
-
+    
     float noise(Point3f p, float frequency) {
         Point3f v = Point3f(p.x() * frequency, p.y() * frequency, p.z() * frequency);
 
@@ -81,18 +78,47 @@ public:
      * \return
      * The sampled point's properties
     */
-    virtual void sample(MediumQueryRecord &mRec) const {
+    float sample(MediumQueryRecord &mRec) {
         // get the point in the medium
         Point3f p = mRec.worldToMedium.inverse().operator*(mRec.p);
         // get the noise value
-        return noise(p);
+        return pnoise(p, frequency, octaves, persistance);
     }
+
+    std::string toString() const {
+        return "PerlinNoise[]";
+    }
+
+
 
 protected:
     int seed;   // Seed for the random number generator
     int octaves;    // Number of octaves
-    int persistance;    // Persistance of the noise
+    float persistance;    // Persistance of the noise
     float frequency;    // Frequency of the noise
+
+    float dot (Point3f p1, Point3f p2) {
+        return p1.x() * p2.x() + p1.y() * p2.y() + p1.z() * p2.z();
+    }
+
+    float rand(Point3f p){
+        return fract(sin(dot(p ,Point3f(12.9898,78.233, 45.543))) * 43758.5453);
+    }
+
+    float fract(float value) {
+        return value - floor(value);
+    }
+
+    // Hermite interpolation function
+    float hermite(float t) {
+        return t * t * (3.0 - 2.0 * t);
+    }
+
+    float mix(float x, float y, float a) {
+        return x * (1.0 - a) + y * a;
+    }
+
 };
 
+NORI_REGISTER_CLASS(PerlinNoise, "perlin");
 NORI_NAMESPACE_END

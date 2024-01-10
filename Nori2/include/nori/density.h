@@ -1,12 +1,13 @@
 #pragma once
 
 #include <nori/object.h>
-#include <medium.h>
+#include <nori/medium.h>
 
 NORI_NAMESPACE_BEGIN
 
 class DensityFunction : public NoriObject {
 public:
+    DensityFunction() {}
 
     DensityFunction(const PropertyList &propList) {
         /* No parameters this time */
@@ -14,15 +15,13 @@ public:
 
     virtual ~DensityFunction() {}
 
+    virtual float sample (MediumQueryRecord &mRec) = 0;
+
     /**
-     * \brief
-     * Sample a point inside the medium
-     * \param[out] mRec
-     * The medium query record
-     * \return
-     * The sampled point's properties
-    */
-    virtual void sample(MediumQueryRecord &mRec) const = 0;
+     * \brief Return the type of object (i.e. Medium/Homogeneous/etc.)
+     * provided by this instance
+     * */
+    EClassType getClassType() const { return EDensityFunction; }
 
 protected:
 };

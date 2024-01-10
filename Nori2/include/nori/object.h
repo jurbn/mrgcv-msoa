@@ -38,6 +38,7 @@ public:
         EPhaseFunction,
         EEmitter,
         EMedium,
+        EDensityFunction,
         ECamera,
         EIntegrator,
         ESampler,
@@ -100,6 +101,7 @@ public:
             case ESampler:    return "sampler";
             case ETest:       return "test";
             case EMedium:     return "medium";
+            case EDensityFunction: return "density";
             default:          return "<unknown>";
         }
     }
