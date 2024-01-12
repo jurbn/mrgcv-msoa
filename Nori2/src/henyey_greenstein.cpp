@@ -12,8 +12,6 @@ public:
 	}
 
 	Color3f sample(PhaseFunctionQueryRecord& mRec, const Point2f &sample) const override {
-		// similar from pbrt
-		// https://www.pbr-book.org/3ed-2018/Light_Transport_II_Volume_Rendering/Sampling_Volume_Scattering
 		float cosTheta;
 		// g=0
 		if (std::abs(g) < 1e-3) cosTheta = 1 - 2 * sample.x();

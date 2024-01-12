@@ -1,0 +1,101 @@
+<?xml version="1.0" ?>
+<scene>
+	<integrator type="path_media"/>
+	<sampler type="independent">
+		<integer name="sampleCount" value="16"/>
+	</sampler>
+	<camera type="perspective">
+		<float name="fov" value="54.43222611864906"/>
+		<float name="nearClip" value="9.999999974752427e-07"/>
+		<float name="farClip" value="10000.0"/>
+		<integer name="width" value="1920"/>
+		<integer name="height" value="1080"/>
+		<transform name="toWorld">
+			<scale value="1.000000 1.000000 -1.000000"/>
+			<matrix value="-21.11505699157715,-8.068848052818905e-14,-1.8459369357515243e-06,0.0,-1.8459369357515243e-06,9.22968524719181e-07,21.11505699157715,0.8240424394607544,0.0,21.11505889892578,-9.229684678757621e-07,1.4700000286102295,0.0,0.0,0.0,1.0"/>
+		</transform>
+	</camera>
+	<!-- SUIT OBJ -->
+	<mesh type="obj">
+		<string name="filename" value="meshes/suit_Material.001.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.01 0.01 0.01"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/shirt_FABRIC 1_FRONT_4917.001.obj"/>
+		<bsdf type="diffuse" name="FABRIC 1_FRONT_4917.001">
+			<color name="albedo" value="0.9 0.9 0.9"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/shirt_FABRIC 3_FRONT_4922.obj"/>
+		<bsdf type="diffuse" name="FABRIC 3_FRONT_4922">
+			<color name="albedo" value="0.9 0.9 0.9"/>
+		</bsdf>
+	</mesh>
+	<!-- SHIRT OBJ -->
+	<mesh type="obj">
+		<string name="filename" value="meshes/shirt_Material3579.001.obj"/>
+		<bsdf type="diffuse" name="Material3579.001">
+			<color name="albedo" value="0.9 0.9 0.9"/>
+		</bsdf>
+	</mesh>
+	<!-- SHIRT OBJ -->
+	<mesh type="obj">
+		<string name="filename" value="meshes/shirt_PT_FABRIC_FRONT_4954.001.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.9 0.9 0.9"/>
+		</bsdf>
+	</mesh>
+	<!-- PANTS OBJ -->
+	<mesh type="obj">
+		<string name="filename" value="meshes/pant_FABRIC 1_FRONT_4917.002.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.01 0.01 0.01"/>
+		</bsdf>
+	</mesh>
+	<!-- FIRE OBJ -->
+	<mesh type="obj">
+		<string name="filename" value="meshes/Fire.obj"/>
+		<!-- <bsdf type="diffuse">
+			<color name="albedo" value="0.725 0.71 0.68"/>
+		</bsdf> -->
+		<medium type="heterogeneous">
+			<transform name="toWorld">
+				<scale value="1.65,5,1.65"/>
+			</transform>
+	
+			<!-- Absorption and scattering coefficients -->
+			<color name="maxScattering" value="10.0, 6.5, 0.1"/>
+			<color name="maxAbsorption" value="0.1, 0.1, 0.1"/>
+			<color name="minScattering" value="10.0, 0.0, 1.5"/>
+			<color name="minAbsorption" value="0.1, 0.1, 0.1"/>
+	
+			<!-- Instantiate a Henyey-Greenstein phase function -->
+			<!-- <phase type="heyney-greenstein">
+				Configure as slightly forward-scattering
+				<float name="g" value="0.5"/>
+			</phase> -->
+    	</medium>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Ground.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.75,0.75,0.75"/>
+		</bsdf>
+	</mesh>
+
+	<mesh type="obj">
+		<string name="filename" value="meshes/Background.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.5 0.5 0.5"/>
+		</bsdf>
+	</mesh>
+	
+	
+	<emitter type="environment">
+      <string name="filename" value="envmap.exr"/>
+	  <color name ="radiance" value="50,50,50"/>
+	</emitter>
+</scene>

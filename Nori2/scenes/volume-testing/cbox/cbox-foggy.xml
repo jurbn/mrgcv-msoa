@@ -15,7 +15,7 @@
 	</camera>
 
 	<sampler type="independent">
-		<integer name="sampleCount" value="8"/>
+		<integer name="sampleCount" value="256"/>
 	</sampler>
 
 	<mesh type="obj">
@@ -56,8 +56,9 @@
 			</transform>
 	
 			<!-- Absorption and scattering coefficients -->
-			<color name="sigmaA" value="0.8, 0.2, 0.8"/>
-			<color name="sigmaS" value="0.2, 0.8, 0.2"/>
+			<color name="sigmaA" value="0.5, 1.0, 0.5"/>
+			<color name="sigmaS" value="0.5, 0.0, 0.5"/>
+			<color name="Le" value="0.5, 0.5, 0.5"/>
 	
 			<!-- Instantiate a Henyey-Greenstein phase function -->
 			<!-- <phase type="heyney-greenstein">
@@ -77,9 +78,8 @@
 
 	<mesh type="obj">
 		<string name="filename" value="meshes/light.obj"/>
-
-		<emitter type="area">
+		<!-- <emitter type="area">
 			<color name="radiance" value="40 40 40"/>
-		</emitter>
+		</emitter> -->
 	</mesh>
 </scene>

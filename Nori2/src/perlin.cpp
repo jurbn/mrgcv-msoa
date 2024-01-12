@@ -80,29 +80,47 @@ public:
     */
     Vector4f sample(MediumQueryRecord &mRec) {
         // get the point in the medium
-        Point3f p = mRec.worldToMedium.inverse().operator*(mRec.p);
+        Point3f p = mRec.p;
         // get the noise value
         float noiseValue = pnoise(p, frequency, octaves, persistance);
 
         // Map noise value to color transitions
-        float gradient = 0.85f-p.y(); // Create a gradient based on height
-        float gradientStep = 0.01f;
+        // the higher the point, the more transparent it is
+        // p.z will be between 1.35 and 1.6, map that to between 0 and 1
+        float height = (p.z() - 1.35) / (1.6 - 1.35);
+        float zGradient = 1.f-height;
+        float zGradientStep = 0.1f;
+        // the higher the value on x, the more transparent it is
+        float xGradient = abs(p.x());
+        // value of y will be between -0.06 and 0.11 (map that to between -1 and 1)
+        float yGradient = abs((p.y() + 0.06) / (0.11 + 0.06) * 2.0 - 1.0);
 
-        Vector4f brighterColor = Vector4f(1.0, 0.65, 0.1, 1.0);
-        Vector4f darkerColor = Vector4f(1.0, 0.0, 0.15, 0.0625);
+
+        Vector4f brighterColor = Vector4f(1.0, 0.65, 0.1, 1.0); // 1.0, 0.65, 0.1
+        Vector4f darkerColor = Vector4f(1.0, 0.0, 0.15, 0.0); // 1.0, 0.0, 0.15
         Vector4f middleColor = brighterColor.cwiseProduct(darkerColor);
 
-        float firstStep = smoothstep(0.0, noiseValue, gradient);
-        float darkerColorStep = smoothstep(0.0, noiseValue, gradient - gradientStep);
+        float firstStep = smoothstep(0.0, noiseValue, zGradient);
+        float darkerColorStep = smoothstep(0.0, noiseValue, zGradient - zGradientStep);
         float darkerColorPath = firstStep - darkerColorStep;
         Vector4f color = mix(brighterColor, darkerColor, darkerColorPath);
 
-        float middleColorStep = smoothstep(0.0, noiseValue, gradient - 0.2 * 2.0);
+        float middleColorStep = smoothstep(0.0, noiseValue, zGradient - 0.2 * 2.0);
 
         color = mix(color, middleColor, darkerColorStep - middleColorStep);
         color = mix(Vector4f(0.0), color, firstStep);
+        color = mix(Vector4f(0.0), color, firstStep);
+        color = mix(Vector4f(0.0), color, firstStep);
 
-        // Apply color based on the noise value and the gradient
+        float peripheralGradient = std::max(xGradient, yGradient);
+        // normalize that peripheral gradient value that can go from 0 to 1 to a value that goes from -1 to 1
+        peripheralGradient = (peripheralGradient - 0.5) * 2.0;
+        // apply sigmoid function to the peripheral gradient
+        color *= 1.0 / (exp(-peripheralGradient/0.1) + 1.0);
+        
+        // apply sigmoid function to the alpha value too (smoothen the edges of the flames)
+        color.w() *= 1.0 / (exp(-color.w()/0.2) + 1.0);
+
         return color;
     }
 

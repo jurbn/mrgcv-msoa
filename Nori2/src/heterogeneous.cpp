@@ -22,22 +22,20 @@ public:
         Vector4f sample_color = m_densityFunction->sample(mRec);	// this is a value between 0 and 1, we want a color!
 		//given the color we've sampled, we need to transform it to scattering and absorption coefficients
 		// the transparence of the medium will be given by the alpha channel of the color
+		// if any of the elements of the color is lower than 0, we will consider it as 0
+		if ((sample_color.x() < 0.0f) || (sample_color.y() < 0.0f) || (sample_color.z() < 0.0f) || (sample_color.w() < 0.0f))
+			sample_color.setZero(4);
 		float alpha = sample_color.w();
-		if (mRec.p.y() > 0.25f)
-			alpha /= (mRec.p.y()+0.75f) * (mRec.p.y()+0.75f) * (mRec.p.y()+0.75f);
-		if (alpha > 0.1f) {
-			mRec.Le = Color3f(alpha)*5.f;
-			mRec.sigmaS = Color3f(sample_color.x(), sample_color.y(), sample_color.z());
-			// the absorption coefficient will be given by the color
-			mRec.sigmaA = Color3f(sample_color.x(), sample_color.y(), sample_color.z());
-			// the extinction coefficient will be given by the sum of the scattering and absorption coefficients
-			mRec.sigmaT = mRec.sigmaS + mRec.sigmaA;
-		} else {
-			mRec.Le = Color3f(0.0f);
-			mRec.sigmaS = Color3f(Epsilon);
-			mRec.sigmaA = Color3f(Epsilon);
-			mRec.sigmaT = Color3f(Epsilon);
-		}
+
+		if (alpha <= 0.05f)
+			alpha = 0.0f;
+
+		mRec.Le = Color3f(alpha)*10.f;
+		mRec.sigmaS = Color3f(sample_color.x(), sample_color.y(), sample_color.z()) * alpha;
+		// the absorption coefficient will be given by the color
+		mRec.sigmaA = Color3f(sample_color.x(), sample_color.y(), sample_color.z()) * alpha;
+		// the extinction coefficient will be given by the sum of the scattering and absorption coefficients
+		mRec.sigmaT = mRec.sigmaS + mRec.sigmaA;
 		// the phase function will be given by the medium's phase function
 		mRec.phaseFunction = m_phaseFunction;
 
@@ -57,42 +55,6 @@ public:
 	}
 
 	Color3f evalTransmittance(const Ray3f &ray, Sampler *sampler) const {
-		// this will evaluate the transmittance along the path segment defined by the ray
-		// this is done using the Radiative Transfer Equation
-		// repeat until the ray exits the medium
-		// printf("evalTransmittance\n");
-		// Ray3f mediumRay(ray);	// this ray's origin is the point of intersection with the medium (multiple steps)
-		// int steps = 0;			// number of steps (debugging)
-		// // initialize the transmittance
-		// Color3f transmittance(1.0f);	// this is the light coming from the medium (radiance)
-		// while (true){
-		// 	// 1. sample the distance to the next medium interaction
-		// 	MediumQueryRecord mRec;
-		// 	bool sampled = sampleDistance(mRec, sampler);
-		// 	float t = mRec.t;
-		// 	if (!sampled) {	// if the ray doesnt intersect with nothing, we're out of the medium
-		// 		printf("evalTransmittance: not sampled with t = %f\n", t);
-		// 		break;
-		// 	}
-		// 	// printf("evalTransmittance: sampled, t = %f\n", t);
-		// 	// 2. update the ray (because we are in the medium, the origin of the ray is the point of intersection)
-		// 	mediumRay = Ray3f(mediumRay.o + mediumRay.d * t, mediumRay.d);
-		// 	std::string rayOrigin = mediumRay.o.toString();
-		// 	printf("evalTransmittance: mediumRay.o = %s\n", rayOrigin.c_str());
-		// 	//std::cout << "mediumRay.o = " << mediumRay.o << std::endl;
-		// 	// create a PhaseFunctionQueryRecord with the sampled direction
-		// 	PhaseFunctionQueryRecord pRec(mediumRay.d);
-		// 	// 3. update the transmittance by using the Radiative Transfer Equation
-		// 	// in-scattering will be given by the scattering coefficient and the phase function
-		// 	Color3f inScattering = m_sigmaS * m_phaseFunction->eval(pRec);
-		// 	// emission will be given by the absorption coefficient and the phase function
-		// 	Color3f emission = m_sigmaA * m_phaseFunction->eval(pRec);
-		// 	// update the transmittance
-		// 	transmittance *= (inScattering + emission);
-		// 	steps++;
-		// }
-		// printf("evalTransmittance: transmittance = %s, steps = %d\n", transmittance.toString(), steps);
-		// return transmittance;
 		return Color3f(0.0f);
 	}
 
@@ -114,10 +76,10 @@ public:
 		// If no density function was specified, instantiate a perlin noise one
 		if (!m_densityFunction) {
 			PropertyList propList;
-			propList.setFloat("frequency", 12.0f);
+			propList.setFloat("frequency", 27.0f);
 			propList.setInteger("octaves", 3);
 			propList.setInteger("persistance", 0.6f);
-			propList.setInteger("seed", 254648);
+			propList.setInteger("seed", 0);
 			m_densityFunction = static_cast<DensityFunction *>(NoriObjectFactory::createInstance("perlin", propList));
 		}
 	}
